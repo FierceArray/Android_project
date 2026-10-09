@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Find me</string>
+
+    <string name="share_button"></string>
+
+    <string name="category_label">Category: %1$s</string>
 </resources>
