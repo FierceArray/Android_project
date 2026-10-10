@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Find me</string>
+    <string name="share_button">Поделиться</string>
+    <string name="category_label">Категория: %1$s</string>
+    <string name="lost_items_title">Объявления о пропаже</string>
 </resources>
