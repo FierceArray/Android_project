@@ -4,44 +4,49 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.findme.ui.theme.FindMeTheme
 
 class MainActivity : ComponentActivity() {
+    private val TAG = "ActivityLifecycle"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        android.util.Log.d(TAG, "onCreate: Activity создана")
         enableEdgeToEdge()
+        val intentData = intent.data
+        var openedItemId: String? = null
+        if (intent.action == android.content.Intent.ACTION_VIEW && intentData != null) {
+            openedItemId = intentData.pathSegments.getOrNull(1)
+        }
         setContent {
             FindMeTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                MainScreen(initialSelectedId = openedItemId)
             }
         }
     }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FindMeTheme {
-        Greeting("Android")
+    override fun onStart() {
+        super.onStart()
+        android.util.Log.d(TAG, "onStart: Activity стала видимой")
+    }
+    override fun onResume() {
+        super.onResume()
+        android.util.Log.d(TAG, "onResume: Activity получила фокус")
+    }
+    override fun onPause() {
+        super.onPause()
+        android.util.Log.d(TAG, "onPause: Activity теряет фокус")
+    }
+    override fun onStop() {
+        super.onStop()
+        android.util.Log.d(TAG, "onStop: Activity больше не видна")
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        android.util.Log.d(TAG, "onDestroy: Activity уничтожена")
+    }
+    override fun onRestart() {
+        super.onRestart()
+        android.util.Log.d(TAG, "onRestart: Возврат в Activity")
     }
 }
+
+
