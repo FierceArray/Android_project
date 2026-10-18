@@ -1,6 +1,35 @@
 <resources>
     <string name="app_name">Find me</string>
-    <string name="share_button">Share</string>
-    <string name="category_label">Category: %1$s</string>
-    <string name="lost_items_title">Lost Items</string>
+
+    <string name="role_headline">Things get lost.\nBut they are found.</string>
+    <string name="role_subtitle">Where do we start?</string>
+    <string name="role_lost_title">I lost something</string>
+    <string name="role_lost_desc">Create a lost item report so we can start the search.</string>
+    <string name="role_found_title">I found something</string>
+    <string name="role_found_desc">Help return an item to its owner.</string>
+    <string name="role_footer">Helping things return home</string>
+
+    <string name="feed_lost_title">Found Items Feed</string>
+    <string name="feed_found_title">Lost Items Feed</string>
+    <string name="banner_lost_title">Blind search — for your safety</string>
+    <string name="banner_lost_desc">Photos and details are hidden. Confirm ownership in chat with the finder.</string>
+    <string name="banner_found_title">Found something? Help it get home.</string>
+    <string name="banner_found_desc">Publish a found report, and the system will find the owner.</string>
+
+    <string name="empty_title">Nothing found yet</string>
+    <string name="empty_subtitle">Items found by other users will appear here. You can create a lost report to speed up the search.</string>
+    <string name="action_retry">Retry</string>
+
+    <string name="action_contact">Contact finder</string>
+    <string name="share_message">Look, an item was found: %1$s</string>
+
+    <string name="toast_chat">Opening secure chat...</string>
+    <string name="toast_create">Opening creation form...</string>
+    <string name="toast_notifications">Notifications</string>
+
+    <string name="cd_profile">Profile</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_add">Add</string>
+    <string name="cd_notifications">Notifications</string>
+    <string name="cd_share">Share</string>
 </resources>

@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import com.findme.ui.theme.FindMeTheme
 
 class MainActivity : ComponentActivity() {
@@ -14,15 +18,32 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val intentData = intent.data
         var openedItemId: String? = null
+
         if (intent.action == android.content.Intent.ACTION_VIEW && intentData != null) {
             openedItemId = intentData.pathSegments.getOrNull(1)
         }
         setContent {
             FindMeTheme {
-                MainScreen(initialSelectedId = openedItemId)
+                var selectedRole by rememberSaveable { mutableStateOf<AppRole?>(null) }
+
+                if (selectedRole == null && openedItemId == null) {
+                    RoleSelectionScreen(
+                        onRoleSelected = { role -> selectedRole = role }
+                    )
+                } else {
+                    MainScreen(
+                        role = selectedRole ?: AppRole.LOST_SOMETHING,
+                        initialSelectedId = openedItemId,
+                        onNavigateBackToRoles = {
+                            selectedRole = null
+                            openedItemId = null
+                        }
+                    )
+                }
             }
         }
     }
+
     override fun onStart() {
         super.onStart()
         android.util.Log.d(TAG, "onStart: Activity стала видимой")

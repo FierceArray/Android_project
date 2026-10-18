@@ -22,33 +22,40 @@ fun ItemDetailScreen(
         IconButton(onClick = onBackClick) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "⟵"
+                contentDescription = "Назад",
+                tint = MaterialTheme.colorScheme.onSurface // Правильный цвет для темы
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
                     text = "ID: #${item.id}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = item.category,
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "${item.location} • ${item.time}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = item.description,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }

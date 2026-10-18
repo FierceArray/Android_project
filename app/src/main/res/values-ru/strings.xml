@@ -1,6 +1,35 @@
 <resources>
     <string name="app_name">Find me</string>
-    <string name="share_button">Поделиться</string>
-    <string name="category_label">Категория: %1$s</string>
-    <string name="lost_items_title">Объявления о пропаже</string>
+
+    <string name="role_headline">Вещи теряются.\nНо находятся.</string>
+    <string name="role_subtitle">С чего начнём?</string>
+    <string name="role_lost_title">Я потерял вещь</string>
+    <string name="role_lost_desc">Создать анкету пропажи, чтобы мы начали поиск.</string>
+    <string name="role_found_title">Я нашел вещь</string>
+    <string name="role_found_desc">Помочь вернуть вещь владельцу.</string>
+    <string name="role_footer">Помогаем вещам вернуться домой</string>
+
+    <string name="feed_lost_title">Лента находок</string>
+    <string name="feed_found_title">Лента потерь</string>
+    <string name="banner_lost_title">Слепой поиск — для вашей защиты</string>
+    <string name="banner_lost_desc">Фото и приметы скрыты. Подтвердите, что вещь ваша, в чате с нашедшим.</string>
+    <string name="banner_found_title">Нашли вещь? Помогите ей вернуться домой.</string>
+    <string name="banner_found_desc">Опубликуйте анкету находки, и система сама найдет владельца.</string>
+
+    <string name="empty_title">Пока ничего нет</string>
+    <string name="empty_subtitle">Здесь появятся вещи, которые нашли другие пользователи. Вы можете создать анкету о своей потере, чтобы ускорить поиск.</string>
+    <string name="action_retry">Повторить попытку</string>
+
+    <string name="action_contact">Связаться с нашедшим</string>
+    <string name="share_message">Смотри, нашлась вещь: %1$s</string>
+
+    <string name="toast_chat">Открытие защищенного чата...</string>
+    <string name="toast_create">Откроется создание анкеты...</string>
+    <string name="toast_notifications">Уведомления</string>
+
+    <string name="cd_profile">Профиль</string>
+    <string name="cd_back">Назад</string>
+    <string name="cd_add">Добавить</string>
+    <string name="cd_notifications">Уведомления</string>
+    <string name="cd_share">Поделиться</string>
 </resources>
