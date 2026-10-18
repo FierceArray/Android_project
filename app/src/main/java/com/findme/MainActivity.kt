@@ -17,15 +17,15 @@ class MainActivity : ComponentActivity() {
         android.util.Log.d(TAG, "onCreate: Activity создана")
         enableEdgeToEdge()
         val intentData = intent.data
-        var openedItemId: String? = null
-
-        if (intent.action == android.content.Intent.ACTION_VIEW && intentData != null) {
-            openedItemId = intentData.pathSegments.getOrNull(1)
+        val deepLinkItemId = if (intent.action == android.content.Intent.ACTION_VIEW && intentData != null) {
+            intentData.pathSegments.getOrNull(1)
+        } else {
+            null
         }
         setContent {
             FindMeTheme {
+                var openedItemId by rememberSaveable { mutableStateOf(deepLinkItemId) }
                 var selectedRole by rememberSaveable { mutableStateOf<AppRole?>(null) }
-
                 if (selectedRole == null && openedItemId == null) {
                     RoleSelectionScreen(
                         onRoleSelected = { role -> selectedRole = role }
