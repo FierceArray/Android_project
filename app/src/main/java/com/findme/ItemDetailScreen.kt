@@ -23,7 +23,7 @@ fun ItemDetailScreen(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Назад",
-                tint = MaterialTheme.colorScheme.onSurface // Правильный цвет для темы
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
         Spacer(modifier = Modifier.height(16.dp))

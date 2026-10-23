@@ -16,7 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import com.findme.ui.theme.AppDimens
 
 enum class AppRole {
     LOST_SOMETHING,
@@ -34,7 +34,7 @@ fun RoleSelectionScreen(onRoleSelected: (AppRole) -> Unit) {
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp)
+                .padding(AppDimens.paddingLarge)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -43,7 +43,7 @@ fun RoleSelectionScreen(onRoleSelected: (AppRole) -> Unit) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
                     Text("Find me", style = MaterialTheme.typography.titleLarge)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -53,59 +53,61 @@ fun RoleSelectionScreen(onRoleSelected: (AppRole) -> Unit) {
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(48.dp))
+
+            Spacer(modifier = Modifier.height(AppDimens.paddingExtraLarge))
             Text(stringResource(R.string.role_headline), style = MaterialTheme.typography.headlineLarge)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
             Text(stringResource(R.string.role_subtitle), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingExtraLarge))
             RoleCard(
                 title = stringResource(R.string.role_lost_title),
                 subtitle = stringResource(R.string.role_lost_desc),
                 icon = { Icon(Icons.Default.Inventory2, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 onClick = { onRoleSelected(AppRole.LOST_SOMETHING) }
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingLarge))
             RoleCard(
                 title = stringResource(R.string.role_found_title),
                 subtitle = stringResource(R.string.role_found_desc),
                 icon = { Icon(Icons.Default.CardGiftcard, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 onClick = { onRoleSelected(AppRole.FOUND_SOMETHING) }
             )
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingExtraLarge))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.VolunteerActivism, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.Default.VolunteerActivism, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(AppDimens.iconSmall))
+                Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
                 Text(stringResource(R.string.role_footer), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingLarge))
         }
     }
 }
+
 @Composable
 fun RoleCard(title: String, subtitle: String, icon: @Composable () -> Unit, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(AppDimens.radiusExtraLarge),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(AppDimens.paddingLarge)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
-                    Box(modifier = Modifier.padding(16.dp)) { icon() }
+                Surface(shape = RoundedCornerShape(AppDimens.radiusLarge), color = MaterialTheme.colorScheme.surface) {
+                    Box(modifier = Modifier.padding(AppDimens.paddingMedium)) { icon() }
                 }
                 Icon(Icons.Default.ArrowOutward, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingLarge))
             Text(title, style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

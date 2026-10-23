@@ -22,7 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import com.findme.ui.theme.AppDimens
 
 sealed interface FeedState {
     data object Loading : FeedState
@@ -38,6 +38,8 @@ fun MainScreen(
     onNavigateBackToRoles: () -> Unit
 ) {
     val context = LocalContext.current
+    val toastCreateMsg = stringResource(R.string.toast_create)
+    val toastNotifMsg = stringResource(R.string.toast_notifications)
     val screenTitle = if (role == AppRole.LOST_SOMETHING) stringResource(R.string.feed_lost_title) else stringResource(R.string.feed_found_title)
     val bannerTitle = if (role == AppRole.LOST_SOMETHING) stringResource(R.string.banner_lost_title) else stringResource(R.string.banner_found_title)
     val bannerSubtitle = if (role == AppRole.LOST_SOMETHING) stringResource(R.string.banner_lost_desc) else stringResource(R.string.banner_found_desc)
@@ -63,7 +65,7 @@ fun MainScreen(
         floatingActionButton = {
             if (selectedItemId == null) {
                 FloatingActionButton(
-                    onClick = { android.widget.Toast.makeText(context, context.getString(R.string.toast_create), android.widget.Toast.LENGTH_SHORT).show() },
+                    onClick = { android.widget.Toast.makeText(context, toastCreateMsg, android.widget.Toast.LENGTH_SHORT).show() },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.background
                 ) {
@@ -91,11 +93,12 @@ fun MainScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = 16.dp, end = 16.dp,
-                    top = innerPadding.calculateTopPadding() + 16.dp,
-                    bottom = innerPadding.calculateBottomPadding() + 80.dp
+                    start = AppDimens.paddingMedium,
+                    end = AppDimens.paddingMedium,
+                    top = innerPadding.calculateTopPadding() + AppDimens.paddingMedium,
+                    bottom = innerPadding.calculateBottomPadding() + AppDimens.fabBottomSpace
                 ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(AppDimens.paddingMedium)
             ) {
                 item {
                     Row(
@@ -104,7 +107,7 @@ fun MainScreen(
                     ) {
                         IconButton(
                             onClick = onNavigateBackToRoles,
-                            modifier = Modifier.padding(end = 8.dp)
+                            modifier = Modifier.padding(end = AppDimens.paddingSmall)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -118,7 +121,7 @@ fun MainScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
                         )
-                        IconButton(onClick = { android.widget.Toast.makeText(context, context.getString(R.string.toast_notifications), android.widget.Toast.LENGTH_SHORT).show() }) {
+                        IconButton(onClick = { android.widget.Toast.makeText(context, toastNotifMsg, android.widget.Toast.LENGTH_SHORT).show() }) {
                             Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.cd_notifications), tint = MaterialTheme.colorScheme.onSurface)
                         }
                     }
@@ -126,11 +129,11 @@ fun MainScreen(
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(AppDimens.radiusMedium)
                     ) {
-                        Row(modifier = Modifier.padding(16.dp)) {
+                        Row(modifier = Modifier.padding(AppDimens.paddingMedium)) {
                             Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(AppDimens.paddingBannerIcon))
                             Column {
                                 Text(bannerTitle, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                                 Text(bannerSubtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -160,21 +163,21 @@ fun MainScreen(
 fun SkeletonCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(AppDimens.radiusLarge),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(AppDimens.paddingMedium)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
-                Spacer(modifier = Modifier.width(16.dp))
+                Box(modifier = Modifier.size(AppDimens.iconTouchTarget).clip(CircleShape).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+                Spacer(modifier = Modifier.width(AppDimens.paddingMedium))
                 Column {
-                    Box(modifier = Modifier.height(20.dp).width(150.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(modifier = Modifier.height(16.dp).width(100.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+                    Box(modifier = Modifier.height(AppDimens.skeletonHeight).width(AppDimens.skeletonWidthLong).clip(RoundedCornerShape(AppDimens.radiusSmall)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+                    Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
+                    Box(modifier = Modifier.height(AppDimens.iconSmall).width(AppDimens.skeletonWidthShort).clip(RoundedCornerShape(AppDimens.radiusSmall)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            Box(modifier = Modifier.height(48.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+            Spacer(modifier = Modifier.height(AppDimens.paddingLarge))
+            Box(modifier = Modifier.height(AppDimens.iconTouchTarget).fillMaxWidth().clip(RoundedCornerShape(AppDimens.radiusExtraLarge)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
         }
     }
 }
@@ -182,13 +185,13 @@ fun SkeletonCard() {
 @Composable
 fun EmptyStateView() {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = AppDimens.paddingExtraLarge),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-        Spacer(modifier = Modifier.height(16.dp))
+        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(AppDimens.iconEmptyState), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
         Text(stringResource(R.string.empty_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
         Text(
             text = stringResource(R.string.empty_subtitle),
             style = MaterialTheme.typography.bodyMedium,
@@ -201,13 +204,13 @@ fun EmptyStateView() {
 @Composable
 fun ErrorStateView(message: String, onRetry: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = AppDimens.paddingExtraLarge),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.WifiOff, contentDescription = null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-        Spacer(modifier = Modifier.height(16.dp))
+        Icon(Icons.Default.WifiOff, contentDescription = null, modifier = Modifier.size(AppDimens.iconEmptyState), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
         Text(message, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
         Button(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
     }
 }

@@ -21,7 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import com.findme.ui.theme.AppDimens
 
 @Composable
 fun LostItemCard(
@@ -30,15 +30,18 @@ fun LostItemCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val deepLink = "findme://app/lost/${item.id}"
+    val shareMessage = stringResource(R.string.share_message, deepLink)
+    val toastChatMsg = stringResource(R.string.toast_chat)
     Card(
         onClick = onItemClick,
         modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) { role = Role.Button },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(AppDimens.radiusLarge), // ИСПОЛЬЗУЕМ ТОКЕН
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(AppDimens.paddingMedium)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -47,7 +50,7 @@ fun LostItemCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(AppDimens.iconTouchTarget) // 48.dp
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
@@ -63,7 +66,7 @@ fun LostItemCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(AppDimens.paddingMedium))
                     Column {
                         Text(
                             text = item.category,
@@ -79,10 +82,9 @@ fun LostItemCard(
                 }
                 IconButton(
                     onClick = {
-                        val deepLink = "findme://app/lost/${item.id}"
                         val sendIntent = android.content.Intent().apply {
                             action = android.content.Intent.ACTION_SEND
-                            putExtra(android.content.Intent.EXTRA_TEXT, context.getString(R.string.share_message, deepLink))
+                            putExtra(android.content.Intent.EXTRA_TEXT, shareMessage)
                             type = "text/plain"
                         }
                         context.startActivity(android.content.Intent.createChooser(sendIntent, null))
@@ -95,25 +97,25 @@ fun LostItemCard(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.Schedule,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(AppDimens.iconSmall),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
                 Text(
                     text = item.time,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
             Button(
                 onClick = {
-                    android.widget.Toast.makeText(context, context.getString(R.string.toast_chat), android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, toastChatMsg, android.widget.Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
