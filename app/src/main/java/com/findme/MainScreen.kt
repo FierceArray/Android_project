@@ -1,71 +1,118 @@
 package com.findme
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findme.ui.theme.AppDimens
+import com.findme.ui.theme.FindMeTheme
 
-sealed interface FeedState {
-    data object Loading : FeedState
-    data object Empty : FeedState
-    data class Error(val message: String) : FeedState
-    data class Content(val items: List<LostItem>) : FeedState
+@Composable
+fun MainScreenContainer(
+    deepLinkType: String?,
+    deepLinkItemId: String?,
+    onShareItem: (LostItem) -> Unit,
+    onOpenLanguageSettings: () -> Unit,
+    viewModel: MainViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(deepLinkType, deepLinkItemId) {
+        viewModel.handleDeepLink(deepLinkType, deepLinkItemId)
+    }
+    val currentMessage = uiState.userMessage
+    val messageText = when (currentMessage) {
+        is UserMessage.OpenChat -> stringResource(R.string.toast_chat, currentMessage.itemId)
+        UserMessage.CreateReport -> stringResource(R.string.toast_create)
+        UserMessage.Notifications -> stringResource(R.string.toast_notifications)
+        UserMessage.BlacklistOpened -> stringResource(R.string.toast_blacklist)
+        UserMessage.ProfileSaved -> stringResource(R.string.toast_profile_saved)
+        null -> null
+    }
+    LaunchedEffect(currentMessage, messageText) {
+        if (currentMessage != null && messageText != null) {
+            snackbarHostState.showSnackbar(message = messageText)
+            viewModel.onAction(MainAction.UserMessageShown)
+        }
+    }
+    FindMeTheme(
+        themeMode = uiState.settings.themeMode,
+        appFont = uiState.settings.appFont
+    ) {
+        MainScreen(
+            state = uiState,
+            onAction = viewModel::onAction,
+            onShareItem = onShareItem,
+            onOpenLanguageSettings = onOpenLanguageSettings,
+            snackbarHostState = snackbarHostState
+        )
+    }
 }
 
 @Composable
 fun MainScreen(
-    role: AppRole,
-    initialSelectedId: String?,
-    onNavigateBackToRoles: () -> Unit
+    state: MainUiState,
+    onAction: (MainAction) -> Unit,
+    onShareItem: (LostItem) -> Unit,
+    modifier: Modifier = Modifier,
+    onOpenLanguageSettings: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
-    val context = LocalContext.current
-    val toastCreateMsg = stringResource(R.string.toast_create)
-    val toastNotifMsg = stringResource(R.string.toast_notifications)
-    val screenTitle = if (role == AppRole.LOST_SOMETHING) stringResource(R.string.feed_lost_title) else stringResource(R.string.feed_found_title)
-    val bannerTitle = if (role == AppRole.LOST_SOMETHING) stringResource(R.string.banner_lost_title) else stringResource(R.string.banner_found_title)
-    val bannerSubtitle = if (role == AppRole.LOST_SOMETHING) stringResource(R.string.banner_lost_desc) else stringResource(R.string.banner_found_desc)
-    val testItems = remember {
-        listOf(
-            LostItem("1", "Найдена электроника", "Серый смартфон в черном чехле. Экран заблокирован.", "Район ст. м. Бауманская", "Сегодня в 14:00", IconCategory.ELECTRONICS),
-            LostItem("2", "Найден питомец", "Собака в ошейнике без адресника. Очень напугана.", "Район ст. м. Сокольники", "Сегодня в 12:30", IconCategory.PET),
-            LostItem("3", "Найдены документы", "Синяя папка с чертежами формата А4.", "Район ст. м. Курская", "Сегодня в 11:15", IconCategory.DOCUMENT),
-            LostItem("4", "Найдена электроника", "Беспроводные наушники в белом кейсе. Найдены на скамейке.", "Район ст. м. Китай-город", "Вчера в 19:40", IconCategory.ELECTRONICS),
-            LostItem("5", "Найдены вещи", "Связка из 4 ключей с металлическим брелоком в виде домика.", "Район ВДНХ", "Вчера в 16:00", IconCategory.OTHER),
-            LostItem("6", "Найден питомец", "Рыжий пушистый кот. Сидел в подъезде, забрали на передержку.", "Район ст. м. Чистые пруды", "Вчера в 09:15", IconCategory.PET),
-            LostItem("7", "Найдены документы", "Студенческий билет в синей обложке.", "Район ст. м. Университет", "Позавчера в 15:30", IconCategory.DOCUMENT),
-            LostItem("8", "Найдена электроника", "Серебристый ноутбук в черном тканевом чехле. Забыт на фудкорте.", "ТЦ Атриум", "Позавчера в 20:00", IconCategory.ELECTRONICS),
-            LostItem("9", "Найдены вещи", "Черный городской рюкзак.", "Парк Горького", "02.09.26 в 14.30", IconCategory.OTHER),
-            LostItem("10", "Найден питомец", "Волнистый попугай желто-зеленого цвета. Залетел в окно.", "Район Тверской улицы", "12.10.26 в 09.45", IconCategory.PET)
-        )
+    val role = state.selectedRole ?: AppRole.LOST_SOMETHING
+    val screenTitle = if (role == AppRole.LOST_SOMETHING) {
+        stringResource(R.string.feed_lost_title)
+    } else {
+        stringResource(R.string.feed_found_title)
     }
-    // FeedState.Content(testItems) FeedState.Loading FeedState.Empty FeedState.Error("Нет соединения с Wi-Fi")
-    var uiState by remember { mutableStateOf<FeedState>(FeedState.Content(testItems)) }
-    var selectedItemId by rememberSaveable { mutableStateOf(initialSelectedId) }
+    val bannerTitle = if (role == AppRole.LOST_SOMETHING) {
+        stringResource(R.string.banner_lost_title)
+    } else {
+        stringResource(R.string.banner_found_title)
+    }
+    val bannerSubtitle = if (role == AppRole.LOST_SOMETHING) {
+        stringResource(R.string.banner_lost_desc)
+    } else {
+        stringResource(R.string.banner_found_desc)
+    }
+
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            if (selectedItemId == null) {
+            if (!state.isSettingsOpen &&
+                !state.isProfileOpen &&
+                state.selectedRole != null &&
+                state.selectedItemState is SelectedItemState.None
+            ) {
                 FloatingActionButton(
-                    onClick = { android.widget.Toast.makeText(context, toastCreateMsg, android.widget.Toast.LENGTH_SHORT).show() },
+                    onClick = { onAction(MainAction.CreateReportClicked) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.background
                 ) {
@@ -75,82 +122,195 @@ fun MainScreen(
         },
         contentWindowInsets = WindowInsets.safeDrawing
     ) { innerPadding ->
-        if (selectedItemId != null) {
-            val currentItem = testItems.find { it.id == selectedItemId }
-            if (currentItem != null) {
-                ItemDetailScreen(
-                    item = currentItem,
-                    onBackClick = { selectedItemId = null },
-                    modifier = Modifier.padding(innerPadding)
-                )
-            } else {
-                ErrorScreen(
-                    onBackClick = { selectedItemId = null },
+        when {
+            state.isSettingsOpen -> {
+                SettingsScreen(
+                    settings = state.settings,
+                    onAction = onAction,
+                    onOpenSystemLanguageSettings = onOpenLanguageSettings,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = AppDimens.paddingMedium,
-                    end = AppDimens.paddingMedium,
-                    top = innerPadding.calculateTopPadding() + AppDimens.paddingMedium,
-                    bottom = innerPadding.calculateBottomPadding() + AppDimens.fabBottomSpace
-                ),
-                verticalArrangement = Arrangement.spacedBy(AppDimens.paddingMedium)
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = onNavigateBackToRoles,
-                            modifier = Modifier.padding(end = AppDimens.paddingSmall)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.cd_back),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Text(
-                            text = screenTitle,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f)
+            state.isProfileOpen -> {
+                ProfileScreen(
+                    profile = state.profile,
+                    onAction = onAction,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+            state.selectedRole == null && state.selectedItemState is SelectedItemState.None -> {
+                RoleSelectionScreen(
+                    trustRating = state.profile.trustRating,
+                    onRoleSelected = { selected -> onAction(MainAction.SelectRole(selected)) },
+                    onOpenProfile = { onAction(MainAction.OpenProfile) },
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+            else -> {
+                when (val selected = state.selectedItemState) {
+                    is SelectedItemState.Found -> {
+                        ItemDetailScreen(
+                            item = selected.item,
+                            onBackClick = { onAction(MainAction.CloseItemDetails) },
+                            onShareClick = { onShareItem(selected.item) },
+                            onContactClick = { onAction(MainAction.ContactUserClicked(selected.item.id)) },
+                            modifier = Modifier.padding(innerPadding)
                         )
-                        IconButton(onClick = { android.widget.Toast.makeText(context, toastNotifMsg, android.widget.Toast.LENGTH_SHORT).show() }) {
-                            Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.cd_notifications), tint = MaterialTheme.colorScheme.onSurface)
-                        }
                     }
-                }
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                        shape = RoundedCornerShape(AppDimens.radiusMedium)
-                    ) {
-                        Row(modifier = Modifier.padding(AppDimens.paddingMedium)) {
-                            Icon(Icons.Default.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(AppDimens.paddingBannerIcon))
-                            Column {
-                                Text(bannerTitle, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                                Text(bannerSubtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    is SelectedItemState.NotFound -> {
+                        ErrorScreen(
+                            onBackClick = { onAction(MainAction.CloseItemDetails) },
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                    }
+                    SelectedItemState.None -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = AppDimens.paddingMedium,
+                                end = AppDimens.paddingMedium,
+                                top = innerPadding.calculateTopPadding() + AppDimens.paddingMedium,
+                                bottom = innerPadding.calculateBottomPadding() + AppDimens.fabBottomSpace
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(AppDimens.paddingMedium)
+                        ) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { onAction(MainAction.NavigateBackToRoles) },
+                                        modifier = Modifier.padding(end = AppDimens.paddingSmall)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = stringResource(R.string.cd_back),
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Text(
+                                        text = screenTitle,
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .semantics { heading() }
+                                    )
+                                    IconButton(onClick = { onAction(MainAction.NotificationsClicked) }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Notifications,
+                                            contentDescription = stringResource(R.string.cd_notifications),
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    IconButton(onClick = { onAction(MainAction.OpenSettings) }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = stringResource(R.string.cd_settings),
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
                             }
-                        }
-                    }
-                }
-                when (val state = uiState) {
-                    is FeedState.Loading -> items(3) { SkeletonCard() }
-                    is FeedState.Empty -> item { EmptyStateView() }
-                    is FeedState.Error -> item { ErrorStateView(state.message) { uiState = FeedState.Loading } }
-                    is FeedState.Content -> {
-                        items(items = state.items, key = { it.id }) { item ->
-                            LostItemCard(
-                                item = item,
-                                onItemClick = { selectedItemId = item.id }
-                            )
+
+                            item {
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                    ),
+                                    shape = RoundedCornerShape(AppDimens.radiusMedium)
+                                ) {
+                                    Row(modifier = Modifier.padding(AppDimens.paddingMedium)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Shield,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(AppDimens.paddingBannerIcon))
+                                        Column {
+                                            Text(
+                                                text = bannerTitle,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = bannerSubtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            item {
+                                SearchField(
+                                    query = state.searchQuery,
+                                    onQueryChange = { onAction(MainAction.SearchQueryChanged(it)) }
+                                )
+                            }
+                            item {
+                                CategoryFilterRow(
+                                    selectedCategory = state.selectedCategory,
+                                    onCategorySelect = { onAction(MainAction.SelectCategory(it)) }
+                                )
+                            }
+                            item {
+                                SortOrderRow(
+                                    sortOrder = state.sortOrder,
+                                    onSortOrderChange = { onAction(MainAction.ChangeSortOrder(it)) }
+                                )
+                            }
+
+                            when (val feed = state.feedState) {
+                                is FeedState.Loading -> {
+                                    items(3) { SkeletonCard() }
+                                }
+
+                                is FeedState.Empty -> {
+                                    item {
+                                        EmptyStateView(
+                                            hasActiveFilters = state.hasActiveFilters,
+                                            onResetFilters = { onAction(MainAction.ResetFilters) }
+                                        )
+                                    }
+                                }
+
+                                is FeedState.Error -> {
+                                    item {
+                                        ErrorStateView(
+                                            message = stringResource(R.string.error_network),
+                                            onRetry = { onAction(MainAction.RetryLoad) }
+                                        )
+                                    }
+                                }
+
+                                is FeedState.Content -> {
+                                    item {
+                                        Text(
+                                            text = stringResource(R.string.found_count_label, state.itemCount),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    items(
+                                        items = feed.items,
+                                        key = { it.id },
+                                        contentType = { "lost_item_card" }
+                                    ) { item ->
+                                        LostItemCard(
+                                            item = item,
+                                            onItemClick = {
+                                                onAction(MainAction.OpenItem(item.type.pathSegment, item.id))
+                                            },
+                                            onShareClick = { onShareItem(item) },
+                                            onContactClick = {
+                                                onAction(MainAction.ContactUserClicked(item.id))
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -160,7 +320,130 @@ fun MainScreen(
 }
 
 @Composable
+fun SearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier.fillMaxWidth(),
+        singleLine = true,
+        shape = RoundedCornerShape(AppDimens.radiusLarge),
+        label = { Text(stringResource(R.string.search_label)) },
+        leadingIcon = {
+            Icon(imageVector = Icons.Default.Search, contentDescription = null)
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = stringResource(R.string.search_clear)
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun CategoryFilterRow(
+    selectedCategory: IconCategory?,
+    onCategorySelect: (IconCategory?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(scrollState),
+        horizontalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
+    ) {
+        FilterChip(
+            selected = selectedCategory == null,
+            onClick = { onCategorySelect(null) },
+            label = { Text(stringResource(R.string.filter_all)) }
+        )
+        FilterChip(
+            selected = selectedCategory == IconCategory.ELECTRONICS,
+            onClick = { onCategorySelect(IconCategory.ELECTRONICS) },
+            label = { Text(stringResource(R.string.filter_electronics)) }
+        )
+        FilterChip(
+            selected = selectedCategory == IconCategory.PET,
+            onClick = { onCategorySelect(IconCategory.PET) },
+            label = { Text(stringResource(R.string.filter_pets)) }
+        )
+        FilterChip(
+            selected = selectedCategory == IconCategory.DOCUMENT,
+            onClick = { onCategorySelect(IconCategory.DOCUMENT) },
+            label = { Text(stringResource(R.string.filter_documents)) }
+        )
+        FilterChip(
+            selected = selectedCategory == IconCategory.OTHER,
+            onClick = { onCategorySelect(IconCategory.OTHER) },
+            label = { Text(stringResource(R.string.filter_other)) }
+        )
+    }
+}
+
+@Composable
+fun SortOrderRow(
+    sortOrder: SortOrder,
+    onSortOrderChange: (SortOrder) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Sort,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(AppDimens.iconSmall)
+        )
+        Text(
+            text = stringResource(R.string.sort_label),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        FilterChip(
+            selected = sortOrder == SortOrder.NEWEST_FIRST,
+            onClick = { onSortOrderChange(SortOrder.NEWEST_FIRST) },
+            label = { Text(stringResource(R.string.sort_newest)) }
+        )
+        FilterChip(
+            selected = sortOrder == SortOrder.OLDEST_FIRST,
+            onClick = { onSortOrderChange(SortOrder.OLDEST_FIRST) },
+            label = { Text(stringResource(R.string.sort_oldest)) }
+        )
+    }
+}
+
+@Composable
 fun SkeletonCard() {
+    var isHighlighted by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isHighlighted = true
+    }
+    val skeletonColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isHighlighted) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
+        },
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 800),
+        finishedListener = {
+            isHighlighted = !isHighlighted
+        },
+        label = "skeleton_shimmer"
+    )
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(AppDimens.radiusLarge),
@@ -168,29 +451,66 @@ fun SkeletonCard() {
     ) {
         Column(modifier = Modifier.padding(AppDimens.paddingMedium)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(AppDimens.iconTouchTarget).clip(CircleShape).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+                Box(
+                    modifier = Modifier
+                        .size(AppDimens.iconTouchTarget)
+                        .clip(CircleShape)
+                        .background(skeletonColor)
+                )
                 Spacer(modifier = Modifier.width(AppDimens.paddingMedium))
                 Column {
-                    Box(modifier = Modifier.height(AppDimens.skeletonHeight).width(AppDimens.skeletonWidthLong).clip(RoundedCornerShape(AppDimens.radiusSmall)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+                    Box(
+                        modifier = Modifier
+                            .height(AppDimens.skeletonHeight)
+                            .width(AppDimens.skeletonWidthLong)
+                            .clip(RoundedCornerShape(AppDimens.radiusSmall))
+                            .background(skeletonColor)
+                    )
                     Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
-                    Box(modifier = Modifier.height(AppDimens.iconSmall).width(AppDimens.skeletonWidthShort).clip(RoundedCornerShape(AppDimens.radiusSmall)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+                    Box(
+                        modifier = Modifier
+                            .height(AppDimens.iconSmall)
+                            .width(AppDimens.skeletonWidthShort)
+                            .clip(RoundedCornerShape(AppDimens.radiusSmall))
+                            .background(skeletonColor)
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(AppDimens.paddingLarge))
-            Box(modifier = Modifier.height(AppDimens.iconTouchTarget).fillMaxWidth().clip(RoundedCornerShape(AppDimens.radiusExtraLarge)).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)))
+            Box(
+                modifier = Modifier
+                    .height(AppDimens.iconTouchTarget)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(AppDimens.radiusExtraLarge))
+                    .background(skeletonColor)
+            )
         }
     }
 }
 
 @Composable
-fun EmptyStateView() {
+fun EmptyStateView(
+    hasActiveFilters: Boolean = false,
+    onResetFilters: () -> Unit = {}
+) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = AppDimens.paddingExtraLarge),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = AppDimens.paddingExtraLarge),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(AppDimens.iconEmptyState), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            modifier = Modifier.size(AppDimens.iconEmptyState),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
         Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-        Text(stringResource(R.string.empty_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            text = stringResource(R.string.empty_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
         Text(
             text = stringResource(R.string.empty_subtitle),
@@ -198,19 +518,121 @@ fun EmptyStateView() {
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (hasActiveFilters) {
+            Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
+            Button(onClick = onResetFilters) {
+                Text(stringResource(R.string.action_reset_filters))
+            }
+        }
     }
 }
 
 @Composable
 fun ErrorStateView(message: String, onRetry: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(top = AppDimens.paddingExtraLarge),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = AppDimens.paddingExtraLarge),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.WifiOff, contentDescription = null, modifier = Modifier.size(AppDimens.iconEmptyState), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        Icon(
+            imageVector = Icons.Default.WifiOff,
+            contentDescription = null,
+            modifier = Modifier.size(AppDimens.iconEmptyState),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
         Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-        Text(message, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            text = message,
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-        Button(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
+        Button(onClick = onRetry) {
+            Text(stringResource(R.string.action_retry))
+        }
+    }
+}
+
+private val previewFoundItems = listOf(
+    LostItem(
+        id = "found_1",
+        type = ItemType.FOUND,
+        category = "Найдена электроника",
+        description = "Серый смартфон (детали скрыты слепым поиском).",
+        location = "Район ст. м. Бауманская",
+        time = "Сегодня в 14:00",
+        timestampOrder = 1,
+        iconType = IconCategory.ELECTRONICS
+    )
+)
+
+@Preview(showBackground = true, name = "1. MainScreen - Content")
+@Composable
+private fun MainScreenContentPreview() {
+    FindMeTheme(dynamicColor = false) {
+        Surface {
+            MainScreen(
+                state = MainUiState(
+                    selectedRole = AppRole.LOST_SOMETHING,
+                    feedState = FeedState.Content(previewFoundItems)
+                ),
+                onAction = {},
+                onShareItem = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "2. MainScreen - Loading")
+@Composable
+private fun MainScreenLoadingPreview() {
+    FindMeTheme(dynamicColor = false) {
+        Surface {
+            MainScreen(
+                state = MainUiState(
+                    selectedRole = AppRole.LOST_SOMETHING,
+                    feedState = FeedState.Loading
+                ),
+                onAction = {},
+                onShareItem = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "3. MainScreen - Empty")
+@Composable
+private fun MainScreenEmptyPreview() {
+    FindMeTheme(dynamicColor = false) {
+        Surface {
+            MainScreen(
+                state = MainUiState(
+                    selectedRole = AppRole.LOST_SOMETHING,
+                    searchQuery = "Ключи",
+                    feedState = FeedState.Empty
+                ),
+                onAction = {},
+                onShareItem = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "4. MainScreen - Error")
+@Composable
+private fun MainScreenErrorPreview() {
+    FindMeTheme(dynamicColor = false) {
+        Surface {
+            MainScreen(
+                state = MainUiState(
+                    selectedRole = AppRole.LOST_SOMETHING,
+                    feedState = FeedState.Error
+                ),
+                onAction = {},
+                onShareItem = {}
+            )
+        }
     }
 }

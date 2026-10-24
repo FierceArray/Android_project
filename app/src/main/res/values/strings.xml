@@ -4,9 +4,9 @@
     <string name="role_headline">Things get lost.\nBut they are found.</string>
     <string name="role_subtitle">Where do we start?</string>
     <string name="role_lost_title">I lost something</string>
-    <string name="role_lost_desc">Create a lost item report so we can start the search.</string>
+    <string name="role_lost_desc">View the feed of found items or create a lost report.</string>
     <string name="role_found_title">I found something</string>
-    <string name="role_found_desc">Help return an item to its owner.</string>
+    <string name="role_found_desc">View the feed of lost items to help return an item to its owner.</string>
     <string name="role_footer">Helping things return home</string>
 
     <string name="feed_lost_title">Found Items Feed</string>
@@ -14,20 +14,96 @@
     <string name="banner_lost_title">Blind search — for your safety</string>
     <string name="banner_lost_desc">Photos and details are hidden. Confirm ownership in chat with the finder.</string>
     <string name="banner_found_title">Found something? Help it get home.</string>
-    <string name="banner_found_desc">Publish a found report, and the system will find the owner.</string>
+    <string name="banner_found_desc">Check lost reports below or publish a found report so the system matches the owner.</string>
+
+    <string name="search_label">Search by area or description</string>
+    <string name="search_clear">Clear search</string>
+    <string name="filter_all">All</string>
+    <string name="filter_electronics">Electronics</string>
+    <string name="filter_pets">Pets</string>
+    <string name="filter_documents">Documents</string>
+    <string name="filter_other">Other</string>
+    <string name="sort_label">Sort by time:</string>
+    <string name="sort_newest">Newest first</string>
+    <string name="sort_oldest">Oldest first</string>
+    <string name="found_count_label">Matching reports: %1$d</string>
 
     <string name="empty_title">Nothing found yet</string>
-    <string name="empty_subtitle">Items found by other users will appear here. You can create a lost report to speed up the search.</string>
+    <string name="empty_subtitle">No reports match your query or filter. Try resetting filters.</string>
     <string name="action_retry">Retry</string>
+    <string name="action_reset_filters">Reset filters</string>
+    <string name="error_network">Failed to load feed. Check your connection.</string>
 
-    <string name="action_contact">Contact finder</string>
-    <string name="share_message">Look, an item was found: %1$s</string>
+    <string name="action_contact_finder">Contact finder</string>
+    <string name="action_contact_owner">Contact owner</string>
+    <string name="share_message_found">Look, an item was found: %1$s</string>
+    <string name="share_message_lost">Help find this lost item: %1$s</string>
 
-    <string name="toast_chat">Opening secure chat...</string>
+    <string name="toast_chat">Opening secure chat for report #%1$s...</string>
     <string name="toast_create">Opening creation form...</string>
-    <string name="toast_notifications">Notifications</string>
+    <string name="toast_notifications">No new notifications</string>
+    <string name="toast_blacklist">Blacklist is empty</string>
+    <string name="toast_profile_saved">Profile updated</string>
+
+    <string name="detail_id_format">Report ID: #%1$s</string>
+    <string name="error_item_not_found">Report not found or link is corrupted</string>
+    <string name="action_back_to_list">Back to list</string>
+
+    <!-- Profile -->
+    <string name="profile_title">My Profile</string>
+    <string name="profile_stats_title">Activity Statistics</string>
+    <string name="profile_stat_returned">Returned</string>
+    <string name="profile_stat_lost">Lost reports</string>
+    <string name="profile_stat_points">Trust points</string>
+    <string name="profile_account_title">Account Details</string>
+    <string name="profile_field_name">Name</string>
+    <string name="profile_field_nickname">Username</string>
+    <string name="profile_field_email">Email</string>
+    <string name="action_edit_profile">Edit</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="profile_achievements_title">Achievements &amp; Badges</string>
+    <string name="profile_achievements_subtitle">Earn trust points for confirmed returns to unlock new badges</string>
+    <string name="ach_sherlock_title">Sherlock</string>
+    <string name="ach_sherlock_desc">Unlocked: Helped return 5 found items to their owners</string>
+    <string name="ach_verified_title">Verified Neighbor</string>
+    <string name="ach_verified_desc">Unlocked: Confirmed email and phone number</string>
+    <string name="ach_loser_title">Mr. Forgetful (Future badge)</string>
+    <string name="ach_loser_desc">Locked: Create 5 lost item reports</string>
+    <string name="ach_legend_title">District Legend (Future badge)</string>
+    <string name="ach_legend_desc">Locked: Accumulate 500 trust points</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_font_title">Application Font</string>
+    <string name="settings_font_desc">Choose the typography style for all screens</string>
+    <string name="font_open_sans">Open Sans</string>
+    <string name="font_montserrat">Montserrat</string>
+    <string name="font_lato">Lato</string>
+    <string name="font_inter">Inter</string>
+
+    <string name="settings_theme_title">Appearance</string>
+    <string name="settings_theme_desc">Switch between light, dark, or system theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_desc">Change interface language in system settings</string>
+    <string name="settings_language_button">Open language settings</string>
+
+    <string name="settings_notif_title">Notifications</string>
+    <string name="settings_notif_desc">Receive alerts about automatic matches</string>
+    <string name="settings_notif_toggle">Enable match notifications</string>
+
+    <string name="settings_privacy_title">Privacy &amp; Security</string>
+    <string name="settings_privacy_desc">Manage profile visibility and chat retention</string>
+    <string name="settings_privacy_hide_seen">Hide last seen time in profile</string>
+    <string name="settings_privacy_auto_delete">Auto-delete resolved chats after 6 months</string>
+    <string name="settings_privacy_blacklist">Manage Blacklist</string>
 
     <string name="cd_profile">Profile</string>
+    <string name="cd_settings">Settings</string>
     <string name="cd_back">Back</string>
     <string name="cd_add">Add</string>
     <string name="cd_notifications">Notifications</string>

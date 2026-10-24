@@ -1,72 +1,79 @@
 package com.findme
 
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import com.findme.ui.theme.FindMeTheme
 
 class MainActivity : ComponentActivity() {
     private val TAG = "ActivityLifecycle"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        android.util.Log.d(TAG, "onCreate: Activity создана")
+        Log.d(TAG, "onCreate: Activity создана")
         enableEdgeToEdge()
-        val intentData = intent.data
-        val deepLinkItemId = if (intent.action == android.content.Intent.ACTION_VIEW && intentData != null) {
+
+        val intentData = intent?.data
+        val deepLinkType = if (intent?.action == Intent.ACTION_VIEW && intentData != null) {
+            intentData.pathSegments.getOrNull(0)
+        } else {
+            null
+        }
+        val deepLinkItemId = if (intent?.action == Intent.ACTION_VIEW && intentData != null) {
             intentData.pathSegments.getOrNull(1)
         } else {
             null
         }
         setContent {
-            FindMeTheme {
-                var openedItemId by rememberSaveable { mutableStateOf(deepLinkItemId) }
-                var selectedRole by rememberSaveable { mutableStateOf<AppRole?>(null) }
-                if (selectedRole == null && openedItemId == null) {
-                    RoleSelectionScreen(
-                        onRoleSelected = { role -> selectedRole = role }
-                    )
-                } else {
-                    MainScreen(
-                        role = selectedRole ?: AppRole.LOST_SOMETHING,
-                        initialSelectedId = openedItemId,
-                        onNavigateBackToRoles = {
-                            selectedRole = null
-                            openedItemId = null
-                        }
-                    )
-                }
-            }
+            MainScreenContainer(
+                deepLinkType = deepLinkType,
+                deepLinkItemId = deepLinkItemId,
+                onShareItem = { item -> shareItem(item) },
+                onOpenLanguageSettings = { openSystemLocaleSettings() }
+            )
         }
     }
-
+    private fun shareItem(item: LostItem) {
+        val shareMessage = if (item.type == ItemType.FOUND) {
+            getString(R.string.share_message_found, item.deepLink)
+        } else {
+            getString(R.string.share_message_lost, item.deepLink)
+        }
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            putExtra(Intent.EXTRA_TEXT, shareMessage)
+            type = "text/plain"
+        }
+        startActivity(Intent.createChooser(sendIntent, null))
+    }
+    private fun openSystemLocaleSettings() {
+        val intent = Intent(Settings.ACTION_LOCALE_SETTINGS)
+        startActivity(intent)
+    }
     override fun onStart() {
         super.onStart()
-        android.util.Log.d(TAG, "onStart: Activity стала видимой")
+        Log.d(TAG, "onStart: Activity стала видимой")
     }
     override fun onResume() {
         super.onResume()
-        android.util.Log.d(TAG, "onResume: Activity получила фокус")
+        Log.d(TAG, "onResume: Activity получила фокус")
     }
     override fun onPause() {
         super.onPause()
-        android.util.Log.d(TAG, "onPause: Activity теряет фокус")
+        Log.d(TAG, "onPause: Activity теряет фокус")
     }
     override fun onStop() {
         super.onStop()
-        android.util.Log.d(TAG, "onStop: Activity больше не видна")
+        Log.d(TAG, "onStop: Activity больше не видна")
     }
     override fun onDestroy() {
         super.onDestroy()
-        android.util.Log.d(TAG, "onDestroy: Activity уничтожена")
+        Log.d(TAG, "onDestroy: Activity уничтожена")
     }
     override fun onRestart() {
         super.onRestart()
-        android.util.Log.d(TAG, "onRestart: Возврат в Activity")
+        Log.d(TAG, "onRestart: Возврат в Activity")
     }
 }
 

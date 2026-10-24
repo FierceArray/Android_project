@@ -10,6 +10,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+enum class ThemeMode {
+    SYSTEM, LIGHT, DARK
+}
+
 private val DarkColorScheme = darkColorScheme(
     primary = MintGreenDark,
     background = BackgroundDark,
@@ -32,11 +36,18 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun FindMeTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    appFont: AppFont = AppFont.OPEN_SANS,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current //Composition local
+    val systemDark = isSystemInDarkTheme()
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> systemDark
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    val context = LocalContext.current
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -46,6 +57,7 @@ fun FindMeTheme(
     }
     MaterialTheme(
         colorScheme = colorScheme,
+        typography = createAppTypography(appFont),
         content = content
     )
 }

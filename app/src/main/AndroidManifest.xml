@@ -31,6 +31,10 @@
                     android:scheme="findme"
                     android:host="app"
                     android:pathPrefix="/lost/" />
+                <data
+                    android:scheme="findme"
+                    android:host="app"
+                    android:pathPrefix="/found/" />
             </intent-filter>
         </activity>
     </application>

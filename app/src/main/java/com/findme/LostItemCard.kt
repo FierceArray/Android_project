@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -27,18 +26,21 @@ import com.findme.ui.theme.AppDimens
 fun LostItemCard(
     item: LostItem,
     onItemClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onContactClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val deepLink = "findme://app/lost/${item.id}"
-    val shareMessage = stringResource(R.string.share_message, deepLink)
-    val toastChatMsg = stringResource(R.string.toast_chat)
+    val contactButtonText = if (item.type == ItemType.FOUND) {
+        stringResource(R.string.action_contact_finder)
+    } else {
+        stringResource(R.string.action_contact_owner)
+    }
     Card(
         onClick = onItemClick,
         modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) { role = Role.Button },
-        shape = RoundedCornerShape(AppDimens.radiusLarge), // ИСПОЛЬЗУЕМ ТОКЕН
+        shape = RoundedCornerShape(AppDimens.radiusLarge),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(AppDimens.paddingMedium)) {
@@ -47,10 +49,13 @@ fun LostItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(AppDimens.iconTouchTarget) // 48.dp
+                            .size(AppDimens.iconTouchTarget)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
@@ -80,16 +85,7 @@ fun LostItemCard(
                         )
                     }
                 }
-                IconButton(
-                    onClick = {
-                        val sendIntent = android.content.Intent().apply {
-                            action = android.content.Intent.ACTION_SEND
-                            putExtra(android.content.Intent.EXTRA_TEXT, shareMessage)
-                            type = "text/plain"
-                        }
-                        context.startActivity(android.content.Intent.createChooser(sendIntent, null))
-                    }
-                ) {
+                IconButton(onClick = onShareClick) {
                     Icon(
                         imageVector = Icons.Default.Share,
                         contentDescription = stringResource(R.string.cd_share),
@@ -114,14 +110,12 @@ fun LostItemCard(
             }
             Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
             Button(
-                onClick = {
-                    android.widget.Toast.makeText(context, toastChatMsg, android.widget.Toast.LENGTH_SHORT).show()
-                },
+                onClick = onContactClick,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text(
-                    text = stringResource(R.string.action_contact),
+                    text = contactButtonText,
                     color = MaterialTheme.colorScheme.background
                 )
             }
