@@ -1,0 +1,111 @@
+<resources>
+    <string name="app_name">Find me</string>
+
+    <string name="role_headline">Вещи теряются.\nНо находятся.</string>
+    <string name="role_subtitle">С чего начнём?</string>
+    <string name="role_lost_title">Я потерял вещь</string>
+    <string name="role_lost_desc">Посмотреть ленту находок или создать анкету пропажи.</string>
+    <string name="role_found_title">Я нашел вещь</string>
+    <string name="role_found_desc">Открыть ленту потерь, чтобы помочь вернуть вещь владельцу.</string>
+    <string name="role_footer">Помогаем вещам вернуться домой</string>
+
+    <string name="feed_lost_title">Лента находок</string>
+    <string name="feed_found_title">Лента потерь</string>
+    <string name="banner_lost_title">Слепой поиск — для вашей защиты</string>
+    <string name="banner_lost_desc">Фото и приметы скрыты. Подтвердите, что вещь ваша, в чате с нашедшим.</string>
+    <string name="banner_found_title">Нашли вещь? Помогите ей вернуться домой.</string>
+    <string name="banner_found_desc">Проверьте анкеты потерявших ниже или опубликуйте находку для автосопоставления.</string>
+
+    <string name="search_label">Поиск по району или описанию</string>
+    <string name="search_clear">Очистить поиск</string>
+    <string name="filter_all">Все</string>
+    <string name="filter_electronics">Электроника</string>
+    <string name="filter_pets">Питомцы</string>
+    <string name="filter_documents">Документы</string>
+    <string name="filter_other">Другое</string>
+    <string name="sort_label">По времени:</string>
+    <string name="sort_newest">Сначала новые</string>
+    <string name="sort_oldest">Сначала старые</string>
+    <string name="found_count_label">Найдено анкет: %1$d</string>
+
+    <string name="empty_title">Пока ничего нет</string>
+    <string name="empty_subtitle">По вашему запросу или фильтру анкет не найдено. Попробуйте сбросить фильтры.</string>
+    <string name="action_retry">Повторить попытку</string>
+    <string name="action_reset_filters">Сбросить фильтры</string>
+    <string name="error_network">Не удалось загрузить ленту. Проверьте соединение.</string>
+
+    <string name="action_contact_finder">Связаться с нашедшим</string>
+    <string name="action_contact_owner">Связаться с владельцем</string>
+    <string name="share_message_found">Смотри, нашлась вещь: %1$s</string>
+    <string name="share_message_lost">Помогите найти потерянную вещь: %1$s</string>
+
+    <string name="toast_chat">Открытие защищенного чата по анкете #%1$s...</string>
+    <string name="toast_create">Откроется создание анкеты...</string>
+    <string name="toast_notifications">Новых уведомлений нет</string>
+    <string name="toast_blacklist">Чёрный список пуст</string>
+    <string name="toast_profile_saved">Профиль сохранён</string>
+
+    <string name="detail_id_format">Анкета ID: #%1$s</string>
+    <string name="error_item_not_found">Анкета не найдена или ссылка повреждена</string>
+    <string name="action_back_to_list">Вернуться к списку</string>
+
+    <!-- Профиль -->
+    <string name="profile_title">Мой профиль</string>
+    <string name="profile_stats_title">Статистика по вещам</string>
+    <string name="profile_stat_returned">Возвращено</string>
+    <string name="profile_stat_lost">Анкет потерь</string>
+    <string name="profile_stat_points">Очки доверия</string>
+    <string name="profile_account_title">Данные аккаунта</string>
+    <string name="profile_field_name">Имя</string>
+    <string name="profile_field_nickname">Имя пользователя</string>
+    <string name="profile_field_email">Почта</string>
+    <string name="action_edit_profile">Изменить</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="profile_achievements_title">Достижения и бейджи</string>
+    <string name="profile_achievements_subtitle">Получайте очки доверия за подтверждённый возврат вещей и открывайте новые награды</string>
+    <string name="ach_sherlock_title">Шерлок</string>
+    <string name="ach_sherlock_desc">Открыто: вы помогли вернуть 5 найденных вещей владельцам</string>
+    <string name="ach_verified_title">Проверенный пользователь</string>
+    <string name="ach_verified_desc">Открыто: подтверждены почта и телефон</string>
+    <string name="ach_loser_title">Мистер Потеряша (Будущая ачивка)</string>
+    <string name="ach_loser_desc">Закрыто: создайте 5 анкет о потерянных вещах</string>
+    <string name="ach_legend_title">Легенда района (Будущая ачивка)</string>
+    <string name="ach_legend_desc">Закрыто: наберите 500 очков доверия</string>
+
+    <!-- Настройки -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_font_title">Шрифт приложения</string>
+    <string name="settings_font_desc">Выберите стиль типографики для всех экранов</string>
+    <string name="font_open_sans">Open Sans</string>
+    <string name="font_montserrat">Montserrat</string>
+    <string name="font_lato">Lato</string>
+    <string name="font_inter">Inter</string>
+
+    <string name="settings_theme_title">Тема оформления</string>
+    <string name="settings_theme_desc">Переключение между светлой, тёмной и системной темой</string>
+    <string name="theme_system">Системная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+
+    <string name="settings_language_title">Язык интерфейса</string>
+    <string name="settings_language_desc">Изменить язык приложения в системных настройках</string>
+    <string name="settings_language_button">Открыть настройки языка</string>
+
+    <string name="settings_notif_title">Уведомления</string>
+    <string name="settings_notif_desc">Оповещения об автоматических совпадениях анкет</string>
+    <string name="settings_notif_toggle">Включить уведомления о совпадениях</string>
+
+    <string name="settings_privacy_title">Конфиденциальность</string>
+    <string name="settings_privacy_desc">Настройки видимости профиля и хранения чатов</string>
+    <string name="settings_privacy_hide_seen">Скрывать время захода в сеть у профиля</string>
+    <string name="settings_privacy_auto_delete">Автоудаление чатов через 6 месяцев</string>
+    <string name="settings_privacy_blacklist">Чёрный список пользователей</string>
+
+    <string name="cd_profile">Профиль</string>
+    <string name="cd_settings">Настройки</string>
+    <string name="cd_back">Назад</string>
+    <string name="cd_add">Добавить</string>
+    <string name="cd_notifications">Уведомления</string>
+    <string name="cd_share">Поделиться</string>
+</resources>
