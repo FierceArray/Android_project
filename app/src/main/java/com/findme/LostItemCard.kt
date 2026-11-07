@@ -6,6 +6,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.QuestionMark
@@ -73,11 +75,22 @@ fun LostItemCard(
                     }
                     Spacer(modifier = Modifier.width(AppDimens.paddingMedium))
                     Column {
-                        Text(
-                            text = item.category,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = item.category,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (item.isMine) {
+                                Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
+                                Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                    Text(
+                                        text = stringResource(R.string.detail_my_badge),
+                                        color = MaterialTheme.colorScheme.background
+                                    )
+                                }
+                            }
+                        }
                         Text(
                             text = item.location,
                             style = MaterialTheme.typography.bodyMedium,
@@ -94,19 +107,37 @@ fun LostItemCard(
                 }
             }
             Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Schedule,
                     contentDescription = null,
                     modifier = Modifier.size(AppDimens.iconSmall),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
                 Text(
-                    text = item.time,
+                    text = item.formattedCreatedTime,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (item.updatedAtMillis != null) {
+                    Icon(
+                        imageVector = Icons.Default.EditNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(AppDimens.iconSmall),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (item.photoAttachment != PhotoAttachment.NONE) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(AppDimens.iconSmall),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
             Button(

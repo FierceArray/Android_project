@@ -1,15 +1,23 @@
 package com.findme
 
-class LostItemsRepository {
-    private val foundItems = listOf(
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+object LostItemsRepository {
+    private val baseTimeMillis = System.currentTimeMillis()
+
+    private val initialItems = listOf(
         LostItem(
             id = "found_1",
             type = ItemType.FOUND,
             category = "Найдена электроника",
             description = "Смартфон (детали скрыты слепым поиском). Подтвердите модель и приметы в чате.",
             location = "Район ст. м. Бауманская",
-            time = "Сегодня в 14:00",
-            timestampOrder = 1,
+            createdAtMillis = baseTimeMillis - 15 * 60 * 1000L - 342L,
+            isMine = true,
+            photoAttachment = PhotoAttachment.PHONE_PHOTO,
             iconType = IconCategory.ELECTRONICS
         ),
         LostItem(
@@ -18,8 +26,9 @@ class LostItemsRepository {
             category = "Найден питомец",
             description = "Собака в ошейнике без адресника. Очень напугана, ждёт хозяина.",
             location = "Район ст. м. Сокольники",
-            time = "Сегодня в 12:30",
-            timestampOrder = 2,
+            createdAtMillis = baseTimeMillis - 2 * 3600 * 1000L - 819L,
+            isMine = false,
+            photoAttachment = PhotoAttachment.PET_PHOTO,
             iconType = IconCategory.PET
         ),
         LostItem(
@@ -28,8 +37,9 @@ class LostItemsRepository {
             category = "Найдены документы",
             description = "Папка с документами формата А4 (ФИО скрыто системой безопасности).",
             location = "Район ст. м. Курская",
-            time = "Сегодня в 11:15",
-            timestampOrder = 3,
+            createdAtMillis = baseTimeMillis - 4 * 3600 * 1000L - 124L,
+            isMine = false,
+            photoAttachment = PhotoAttachment.DOCS_PHOTO,
             iconType = IconCategory.DOCUMENT
         ),
         LostItem(
@@ -38,8 +48,8 @@ class LostItemsRepository {
             category = "Найдена электроника",
             description = "Беспроводные наушники в кейсе. Найдены на скамейке в парке.",
             location = "Район ст. м. Китай-город",
-            time = "Вчера в 19:40",
-            timestampOrder = 4,
+            createdAtMillis = baseTimeMillis - 20 * 3600 * 1000L - 551L,
+            isMine = false,
             iconType = IconCategory.ELECTRONICS
         ),
         LostItem(
@@ -48,30 +58,22 @@ class LostItemsRepository {
             category = "Найдены вещи",
             description = "Связка ключей с брелоком (точное число ключей скрыто).",
             location = "Район ВДНХ",
-            time = "Вчера в 16:00",
-            timestampOrder = 5,
+            createdAtMillis = baseTimeMillis - 26 * 3600 * 1000L - 908L,
+            isMine = false,
+            photoAttachment = PhotoAttachment.KEYS_PHOTO,
             iconType = IconCategory.OTHER
         ),
-        LostItem(
-            id = "found_6",
-            type = ItemType.FOUND,
-            category = "Найден питомец",
-            description = "Рыжий пушистый кот. Сидел в подъезде, забрали на передержку.",
-            location = "Район ст. м. Чистые пруды",
-            time = "Позавчера в 09:15",
-            timestampOrder = 6,
-            iconType = IconCategory.PET
-        )
-    )
-    private val lostItems = listOf(
         LostItem(
             id = "lost_1",
             type = ItemType.LOST,
             category = "Потеряна электроника",
             description = "Ищу серый смартфон в темном чехле. На экране небольшая царапина снизу.",
             location = "Район ст. м. Каширская (МИФИ)",
-            time = "Сегодня в 15:20",
-            timestampOrder = 1,
+            createdAtMillis = baseTimeMillis - 10 * 60 * 1000L - 117L,
+            updatedAtMillis = baseTimeMillis - 5 * 60 * 1000L - 409L,
+            changeNote = "Добавил примету про царапину на экране и фото",
+            isMine = true,
+            photoAttachment = PhotoAttachment.PHONE_PHOTO,
             iconType = IconCategory.ELECTRONICS
         ),
         LostItem(
@@ -80,8 +82,9 @@ class LostItemsRepository {
             category = "Потерян питомец",
             description = "Убежал рыжий кот в зеленом ошейнике, откликается на кличку Персик.",
             location = "Район ст. м. Чистые пруды",
-            time = "Сегодня в 09:15",
-            timestampOrder = 2,
+            createdAtMillis = baseTimeMillis - 5 * 3600 * 1000L - 612L,
+            isMine = false,
+            photoAttachment = PhotoAttachment.PET_PHOTO,
             iconType = IconCategory.PET
         ),
         LostItem(
@@ -90,38 +93,38 @@ class LostItemsRepository {
             category = "Потеряны документы",
             description = "Утерян студенческий билет и пропуск в синей обложке.",
             location = "Район ст. м. Университет",
-            time = "Вчера в 18:00",
-            timestampOrder = 3,
+            createdAtMillis = baseTimeMillis - 22 * 3600 * 1000L - 205L,
+            isMine = true,
+            photoAttachment = PhotoAttachment.DOCS_PHOTO,
             iconType = IconCategory.DOCUMENT
         ),
         LostItem(
             id = "lost_4",
             type = ItemType.LOST,
-            category = "Потеряна электроника",
-            description = "Забыт серебристый ноутбук в тканевом чехле на фудкорте.",
-            location = "ТЦ Атриум (Курская)",
-            time = "Вчера в 20:00",
-            timestampOrder = 4,
-            iconType = IconCategory.ELECTRONICS
-        ),
-        LostItem(
-            id = "lost_5",
-            type = ItemType.LOST,
             category = "Потеряны вещи",
             description = "Оставлен черный городской рюкзак со спортивной формой.",
             location = "Парк Горького",
-            time = "Позавчера в 14:30",
-            timestampOrder = 5,
+            createdAtMillis = baseTimeMillis - 48 * 3600 * 1000L - 773L,
+            isMine = false,
+            photoAttachment = PhotoAttachment.KEYS_PHOTO,
             iconType = IconCategory.OTHER
         )
     )
+
+    private val _allItems = MutableStateFlow(initialItems)
+    val allItems: StateFlow<List<LostItem>> = _allItems.asStateFlow()
+
     fun getItemsForRole(
         role: AppRole,
         query: String,
         category: IconCategory?,
+        onlyMine: Boolean,
         sortOrder: SortOrder
     ): List<LostItem> {
-        val sourceList = if (role == AppRole.LOST_SOMETHING) foundItems else lostItems
+        val targetType = if (role == AppRole.LOST_SOMETHING) ItemType.FOUND else ItemType.LOST
+        val sourceList = _allItems.value.filter { item ->
+            if (onlyMine) item.isMine else item.type == targetType
+        }
         val trimmedQuery = query.trim()
         val filtered = sourceList.filter { item ->
             val matchesCategory = category == null || item.iconType == category
@@ -132,16 +135,81 @@ class LostItemsRepository {
             matchesCategory && matchesQuery
         }
         return when (sortOrder) {
-            SortOrder.NEWEST_FIRST -> filtered.sortedBy { it.timestampOrder }
-            SortOrder.OLDEST_FIRST -> filtered.sortedByDescending { it.timestampOrder }
+            SortOrder.NEWEST_FIRST -> filtered.sortedByDescending { it.createdAtMillis }
+            SortOrder.OLDEST_FIRST -> filtered.sortedBy { it.createdAtMillis }
         }
     }
+
     fun getItemByLink(typeSegment: String?, itemId: String?): LostItem? {
         if (itemId.isNullOrBlank()) return null
+        val list = _allItems.value
         return when (typeSegment) {
-            ItemType.FOUND.pathSegment -> foundItems.find { it.id == itemId }
-            ItemType.LOST.pathSegment -> lostItems.find { it.id == itemId }
-            else -> (foundItems + lostItems).find { it.id == itemId }
+            ItemType.FOUND.pathSegment -> list.find { it.type == ItemType.FOUND && it.id == itemId }
+            ItemType.LOST.pathSegment -> list.find { it.type == ItemType.LOST && it.id == itemId }
+            else -> list.find { it.id == itemId }
         }
+    }
+
+    fun getItemById(itemId: String?): LostItem? {
+        if (itemId.isNullOrBlank()) return null
+        return _allItems.value.find { it.id == itemId }
+    }
+
+    fun saveItem(
+        existingId: String?,
+        type: ItemType,
+        categoryTitle: String,
+        description: String,
+        location: String,
+        iconType: IconCategory,
+        photoAttachment: PhotoAttachment,
+        changeNote: String
+    ): LostItem {
+        val nowMillis = System.currentTimeMillis()
+        val existing = existingId?.let { getItemById(it) }
+
+        val savedItem = if (existing != null) {
+            existing.copy(
+                type = type,
+                category = categoryTitle.trim(),
+                description = description.trim(),
+                location = location.trim(),
+                iconType = iconType,
+                photoAttachment = photoAttachment,
+                updatedAtMillis = nowMillis,
+                changeNote = changeNote.trim().ifEmpty { null }
+            )
+        } else {
+            val newId = "${type.pathSegment}_${nowMillis % 100000}"
+            LostItem(
+                id = newId,
+                type = type,
+                category = categoryTitle.trim(),
+                description = description.trim(),
+                location = location.trim(),
+                createdAtMillis = nowMillis,
+                updatedAtMillis = null,
+                changeNote = null,
+                isMine = true,
+                photoAttachment = photoAttachment,
+                iconType = iconType
+            )
+        }
+
+        _allItems.update { currentList ->
+            if (existing != null) {
+                currentList.map { if (it.id == existing.id) savedItem else it }
+            } else {
+                listOf(savedItem) + currentList
+            }
+        }
+        return savedItem
+    }
+
+    fun deleteOwnItem(itemId: String): Boolean {
+        val item = getItemById(itemId) ?: return false
+        if (!item.isMine) return false
+        _allItems.update { list -> list.filterNot { it.id == itemId } }
+        return true
     }
 }

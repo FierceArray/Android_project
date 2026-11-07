@@ -18,7 +18,7 @@
 
     <string name="search_label">Search by area or description</string>
     <string name="search_clear">Clear search</string>
-    <string name="filter_all">All</string>
+    <string name="filter_all">All categories</string>
     <string name="filter_electronics">Electronics</string>
     <string name="filter_pets">Pets</string>
     <string name="filter_documents">Documents</string>
@@ -40,12 +40,48 @@
     <string name="share_message_lost">Help find this lost item: %1$s</string>
 
     <string name="toast_chat">Opening secure chat for report #%1$s...</string>
-    <string name="toast_create">Opening creation form...</string>
+    <string name="toast_create">Report saved successfully</string>
+    <string name="toast_deleted">Report deleted</string>
     <string name="toast_notifications">No new notifications</string>
     <string name="toast_blacklist">Blacklist is empty</string>
     <string name="toast_profile_saved">Profile updated</string>
 
     <string name="detail_id_format">Report ID: #%1$s</string>
+    <string name="detail_select_placeholder">Select a report from the list to view details</string>
+    <string name="detail_my_badge">Mine</string>
+    <string name="filter_only_mine">Only my reports</string>
+    <string name="detail_created_at">Created: %1$s</string>
+    <string name="detail_updated_at">Last edited: %1$s</string>
+    <string name="detail_change_note">Change note: %1$s</string>
+    <string name="detail_exact_millis">Anti-fraud timestamp: %1$d ms</string>
+    <string name="detail_photo_attached">Attached photo: %1$s</string>
+    <string name="action_edit_item">Edit</string>
+    <string name="action_delete_item">Delete</string>
+    <string name="dialog_delete_title">Delete report?</string>
+    <string name="dialog_delete_message">This action cannot be undone. Are you sure you want to delete your report?</string>
+
+    <string name="edit_title_create">New Report</string>
+    <string name="edit_title_update">Edit Report</string>
+    <string name="edit_type_lost">I lost an item</string>
+    <string name="edit_type_found">I found an item</string>
+    <string name="edit_field_title">Title / Short category</string>
+    <string name="edit_field_location">Location (metro / street)</string>
+    <string name="edit_field_description">Detailed description &amp; signs</string>
+    <string name="edit_field_change_note">What changed? (edit note)</string>
+    <string name="edit_photo_section">Attach photo (optional)</string>
+    <string name="photo_none">No photo</string>
+    <string name="photo_phone">Smartphone</string>
+    <string name="photo_pet">Pet photo</string>
+    <string name="photo_docs">Documents</string>
+    <string name="photo_keys">Keys / Bag</string>
+    <string name="dialog_exit_title">Discard changes?</string>
+    <string name="dialog_exit_message">You have unsaved changes in this form. Exit without saving?</string>
+    <string name="action_discard">Exit</string>
+    <string name="action_stay">Stay</string>
+
+    <string name="fold_book_mode">Foldable Book mode: panes split around hinge</string>
+    <string name="fold_tabletop_mode">Foldable Tabletop mode: content on top, controls below hinge</string>
+
     <string name="error_item_not_found">Report not found or link is corrupted</string>
     <string name="action_back_to_list">Back to list</string>
 
@@ -108,4 +144,6 @@
     <string name="cd_add">Add</string>
     <string name="cd_notifications">Notifications</string>
     <string name="cd_share">Share</string>
+    <string name="cd_filter_category">Filter by category</string>
+    <string name="cd_sort_time">Sort by time</string>
 </resources>

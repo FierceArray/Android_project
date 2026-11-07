@@ -18,7 +18,7 @@
 
     <string name="search_label">Поиск по району или описанию</string>
     <string name="search_clear">Очистить поиск</string>
-    <string name="filter_all">Все</string>
+    <string name="filter_all">Все категории</string>
     <string name="filter_electronics">Электроника</string>
     <string name="filter_pets">Питомцы</string>
     <string name="filter_documents">Документы</string>
@@ -40,12 +40,48 @@
     <string name="share_message_lost">Помогите найти потерянную вещь: %1$s</string>
 
     <string name="toast_chat">Открытие защищенного чата по анкете #%1$s...</string>
-    <string name="toast_create">Откроется создание анкеты...</string>
+    <string name="toast_create">Анкета успешно сохранена</string>
+    <string name="toast_deleted">Анкета удалена</string>
     <string name="toast_notifications">Новых уведомлений нет</string>
     <string name="toast_blacklist">Чёрный список пуст</string>
     <string name="toast_profile_saved">Профиль сохранён</string>
 
     <string name="detail_id_format">Анкета ID: #%1$s</string>
+    <string name="detail_select_placeholder">Выберите анкету в списке слева, чтобы посмотреть подробности</string>
+    <string name="detail_my_badge">Моя</string>
+    <string name="filter_only_mine">Только мои анкеты</string>
+    <string name="detail_created_at">Создано: %1$s</string>
+    <string name="detail_updated_at">Изменено: %1$s</string>
+    <string name="detail_change_note">Что изменилось: %1$s</string>
+    <string name="detail_exact_millis">Антифрод-метка времени: %1$d мс</string>
+    <string name="detail_photo_attached">Прикреплено фото: %1$s</string>
+    <string name="action_edit_item">Редактировать</string>
+    <string name="action_delete_item">Удалить</string>
+    <string name="dialog_delete_title">Удалить анкету?</string>
+    <string name="dialog_delete_message">Вы уверены, что хотите удалить свою анкету? Это действие нельзя отменить.</string>
+
+    <string name="edit_title_create">Новая анкета</string>
+    <string name="edit_title_update">Редактирование анкеты</string>
+    <string name="edit_type_lost">Я потерял вещь</string>
+    <string name="edit_type_found">Я нашёл вещь</string>
+    <string name="edit_field_title">Заголовок / Краткая категория</string>
+    <string name="edit_field_location">Район или место (метро / улица)</string>
+    <string name="edit_field_description">Подробное описание и приметы</string>
+    <string name="edit_field_change_note">Подпись к изменению (что изменилось?)</string>
+    <string name="edit_photo_section">Прикрепить фото (по желанию)</string>
+    <string name="photo_none">Без фото</string>
+    <string name="photo_phone">Смартфон</string>
+    <string name="photo_pet">Фото питомца</string>
+    <string name="photo_docs">Документы</string>
+    <string name="photo_keys">Ключи / Рюкзак</string>
+    <string name="dialog_exit_title">Выйти без сохранения?</string>
+    <string name="dialog_exit_message">Вы изменили данные анкеты. Если выйти сейчас, изменения потеряются.</string>
+    <string name="action_discard">Выйти</string>
+    <string name="action_stay">Остаться</string>
+
+    <string name="fold_book_mode">Режим Book (книга): панели разделены сгибом экрана</string>
+    <string name="fold_tabletop_mode">Режим Tabletop (ноутбук): контент сверху, управление под линией сгиба</string>
+
     <string name="error_item_not_found">Анкета не найдена или ссылка повреждена</string>
     <string name="action_back_to_list">Вернуться к списку</string>
 
@@ -108,4 +144,6 @@
     <string name="cd_add">Добавить</string>
     <string name="cd_notifications">Уведомления</string>
     <string name="cd_share">Поделиться</string>
+    <string name="cd_filter_category">Фильтр по категориям</string>
+    <string name="cd_sort_time">Сортировка по времени</string>
 </resources>
