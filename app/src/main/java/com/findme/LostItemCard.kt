@@ -20,8 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import com.findme.ui.theme.AppDimens
 
 @Composable
@@ -37,6 +39,8 @@ fun LostItemCard(
     } else {
         stringResource(R.string.action_contact_owner)
     }
+    val myBadgeDescription = stringResource(R.string.detail_my_badge)
+
     Card(
         onClick = onItemClick,
         modifier = modifier
@@ -75,22 +79,11 @@ fun LostItemCard(
                     }
                     Spacer(modifier = Modifier.width(AppDimens.paddingMedium))
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = item.category,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            if (item.isMine) {
-                                Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
-                                Badge(containerColor = MaterialTheme.colorScheme.primary) {
-                                    Text(
-                                        text = stringResource(R.string.detail_my_badge),
-                                        color = MaterialTheme.colorScheme.background
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            text = item.category,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         Text(
                             text = item.location,
                             style = MaterialTheme.typography.bodyMedium,
@@ -98,12 +91,26 @@ fun LostItemCard(
                         )
                     }
                 }
-                IconButton(onClick = onShareClick) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = stringResource(R.string.cd_share),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    IconButton(onClick = onShareClick) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.cd_share),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (item.isMine) {
+                        Box(
+                            modifier = Modifier
+                                .width(24.dp)
+                                .height(8.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .semantics { contentDescription = myBadgeDescription }
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(AppDimens.paddingMedium))

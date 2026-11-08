@@ -135,10 +135,15 @@ fun MainScreenContainer(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             contentWindowInsets = WindowInsets.safeDrawing
         ) { innerPadding ->
+            val bottomInset = innerPadding.calculateBottomPadding()
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(
+                        top = innerPadding.calculateTopPadding(),
+                        start = innerPadding.calculateStartPadding(androidx.compose.ui.platform.LocalLayoutDirection.current),
+                        end = innerPadding.calculateEndPadding(androidx.compose.ui.platform.LocalLayoutDirection.current)
+                    )
             ) {
                 if (foldInfo.posture != FoldPosture.NORMAL) {
                     FoldPostureBanner(posture = foldInfo.posture)
@@ -172,7 +177,8 @@ fun MainScreenContainer(
                                 },
                                 onOpenProfile = {
                                     backStack.add(ProfileRoute)
-                                }
+                                },
+                                modifier = Modifier.padding(bottom = bottomInset)
                             )
                         }
 
@@ -191,6 +197,7 @@ fun MainScreenContainer(
                             }
                             FeedListPane(
                                 state = uiState,
+                                bottomInset = bottomInset,
                                 onAction = { action ->
                                     when (action) {
                                         MainAction.NavigateBackToRoles -> {
@@ -239,13 +246,15 @@ fun MainScreenContainer(
                                     onDeleteClick = {
                                         viewModel.onAction(MainAction.DeleteItem(item.id))
                                         if (backStack.size > 1) backStack.removeLastOrNull()
-                                    }
+                                    },
+                                    modifier = Modifier.padding(bottom = bottomInset)
                                 )
                             } else {
                                 ErrorScreen(
                                     onBackClick = {
                                         if (backStack.size > 1) backStack.removeLastOrNull()
-                                    }
+                                    },
+                                    modifier = Modifier.padding(bottom = bottomInset)
                                 )
                             }
                         }
@@ -270,7 +279,8 @@ fun MainScreenContainer(
                                 },
                                 onCancel = {
                                     if (backStack.size > 1) backStack.removeLastOrNull()
-                                }
+                                },
+                                modifier = Modifier.padding(bottom = bottomInset)
                             )
                         }
 
@@ -286,7 +296,8 @@ fun MainScreenContainer(
                                         MainAction.OpenSettings -> backStack.add(SettingsRoute)
                                         else -> viewModel.onAction(action)
                                     }
-                                }
+                                },
+                                modifier = Modifier.padding(bottom = bottomInset)
                             )
                         }
 
@@ -301,15 +312,17 @@ fun MainScreenContainer(
                                         else -> viewModel.onAction(action)
                                     }
                                 },
-                                onOpenSystemLanguageSettings = onOpenLanguageSettings
+                                onOpenSystemLanguageSettings = onOpenLanguageSettings,
+                                modifier = Modifier.padding(bottom = bottomInset)
                             )
                         }
                     }
                 )
             }
         }
+        }
     }
-}
+
 
 @Composable
 private fun FoldPostureBanner(posture: FoldPosture) {
@@ -365,7 +378,8 @@ fun FeedListPane(
     onItemClick: (LostItem) -> Unit,
     onCreateClick: () -> Unit,
     onShareItem: (LostItem) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bottomInset: androidx.compose.ui.unit.Dp = AppDimens.paddingSmall
 ) {
     val role = state.selectedRole ?: AppRole.LOST_SOMETHING
     val screenTitle = if (role == AppRole.LOST_SOMETHING) {
@@ -391,7 +405,7 @@ fun FeedListPane(
                 start = AppDimens.paddingMedium,
                 end = AppDimens.paddingMedium,
                 top = AppDimens.paddingMedium,
-                bottom = AppDimens.fabBottomSpace
+                bottom = bottomInset + AppDimens.fabBottomSpace
             ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.paddingMedium)
         ) {
@@ -533,7 +547,10 @@ fun FeedListPane(
             contentColor = MaterialTheme.colorScheme.background,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(AppDimens.paddingMedium)
+                .padding(
+                    end = AppDimens.paddingMedium,
+                    bottom = bottomInset + AppDimens.paddingMedium
+                )
         ) {
             Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
         }
