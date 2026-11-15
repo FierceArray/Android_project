@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -47,8 +46,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -67,8 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -165,6 +160,7 @@ fun MainScreenContainer(
         UserMessage.ProfileSaved -> stringResource(R.string.toast_profile_saved)
         null -> null
     }
+
     LaunchedEffect(currentMessage, messageText) {
         if (currentMessage != null && messageText != null) {
             snackbarHostState.showSnackbar(message = messageText)
@@ -488,13 +484,13 @@ private fun FloatingOvalBottomBar(
         modifier = modifier.fillMaxWidth(),
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 6.dp,
-        shadowElevation = 8.dp
+        tonalElevation = AppDimens.paddingSmall,
+        shadowElevation = AppDimens.paddingSmall
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                .padding(horizontal = AppDimens.paddingSmall, vertical = AppDimens.radiusSmall),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -505,6 +501,7 @@ private fun FloatingOvalBottomBar(
                 onClick = onSelectFeedTab,
                 modifier = Modifier.weight(1f)
             )
+
             OvalBarItem(
                 icon = Icons.AutoMirrored.Filled.Assignment,
                 label = stringResource(R.string.nav_my_reports),
@@ -512,6 +509,7 @@ private fun FloatingOvalBottomBar(
                 onClick = onSelectMyReportsTab,
                 modifier = Modifier.weight(1f)
             )
+
             OvalBarItem(
                 icon = Icons.Default.Notifications,
                 label = stringResource(R.string.nav_notifications),
@@ -519,6 +517,7 @@ private fun FloatingOvalBottomBar(
                 onClick = onNotificationsClick,
                 modifier = Modifier.weight(1f)
             )
+
             OvalBarItem(
                 icon = Icons.Default.Person,
                 label = stringResource(R.string.nav_profile),
@@ -526,6 +525,7 @@ private fun FloatingOvalBottomBar(
                 onClick = onProfileClick,
                 modifier = Modifier.weight(1f)
             )
+
             OvalBarItem(
                 icon = Icons.Default.Settings,
                 label = stringResource(R.string.nav_settings),
@@ -562,7 +562,7 @@ private fun OvalBarItem(
             .background(containerColor)
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) { role = Role.Tab }
-            .padding(vertical = 6.dp, horizontal = 2.dp),
+            .padding(vertical = AppDimens.radiusSmall, horizontal = AppDimens.radiusSmall),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -570,12 +570,14 @@ private fun OvalBarItem(
             imageVector = icon,
             contentDescription = null,
             tint = contentColor,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(AppDimens.iconSmall)
         )
-        Spacer(modifier = Modifier.height(2.dp))
+
+        Spacer(modifier = Modifier.height(AppDimens.radiusSmall))
+
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+            style = MaterialTheme.typography.labelMedium,
             color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -598,7 +600,9 @@ private fun DetailPlaceholderPane() {
                 modifier = Modifier.size(AppDimens.iconEmptyState),
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
             )
+
             Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
+
             Text(
                 text = stringResource(R.string.detail_select_placeholder),
                 style = MaterialTheme.typography.titleMedium,
@@ -616,7 +620,7 @@ fun FeedListPane(
     onItemClick: (LostItem) -> Unit,
     onShareItem: (LostItem) -> Unit,
     modifier: Modifier = Modifier,
-    bottomInset: Dp = 0.dp,
+    bottomInset: Dp = AppDimens.radiusSmall,
     showBottomBar: Boolean = true,
     showFabInsidePane: Boolean = true,
     onSearchFocusChanged: (Boolean) -> Unit = {},
@@ -648,9 +652,9 @@ fun FeedListPane(
                 start = AppDimens.paddingMedium,
                 end = AppDimens.paddingMedium,
                 top = AppDimens.paddingSmall,
-                bottom = bottomInset + 148.dp
+                bottom = bottomInset + AppDimens.fabBottomSpace + AppDimens.iconEmptyState
             ),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(AppDimens.paddingBannerIcon)
         ) {
             item {
                 Row(
@@ -659,7 +663,7 @@ fun FeedListPane(
                 ) {
                     IconButton(
                         onClick = { onAction(MainAction.NavigateBackToRoles) },
-                        modifier = Modifier.padding(end = 4.dp)
+                        modifier = Modifier.padding(end = AppDimens.radiusSmall)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -667,6 +671,7 @@ fun FeedListPane(
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
+
                     Text(
                         text = screenTitle,
                         style = MaterialTheme.typography.headlineMedium,
@@ -685,19 +690,22 @@ fun FeedListPane(
                     ),
                     shape = RoundedCornerShape(AppDimens.radiusMedium)
                 ) {
-                    Row(modifier = Modifier.padding(12.dp)) {
+                    Row(modifier = Modifier.padding(AppDimens.paddingBannerIcon)) {
                         Icon(
                             imageVector = Icons.Default.Shield,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
+
                         Spacer(modifier = Modifier.width(AppDimens.paddingBannerIcon))
+
                         Column {
                             Text(
                                 text = bannerTitle,
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
+
                             Text(
                                 text = bannerSubtitle,
                                 style = MaterialTheme.typography.bodySmall,
@@ -751,6 +759,7 @@ fun FeedListPane(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
                     items(
                         items = feed.items,
                         key = { it.id },
@@ -806,7 +815,7 @@ fun FeedListPane(
                         contentColor = MaterialTheme.colorScheme.background,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(bottom = 68.dp)
+                            .padding(bottom = AppDimens.fabBottomSpace)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
                     }
@@ -942,6 +951,7 @@ fun SearchAndFilterBar(
                         categoryMenuExpanded = false
                     }
                 )
+
                 CategoryMenuItem(
                     title = stringResource(R.string.filter_electronics),
                     selected = selectedCategory == IconCategory.ELECTRONICS,
@@ -950,6 +960,7 @@ fun SearchAndFilterBar(
                         categoryMenuExpanded = false
                     }
                 )
+
                 CategoryMenuItem(
                     title = stringResource(R.string.filter_pets),
                     selected = selectedCategory == IconCategory.PET,
@@ -958,6 +969,7 @@ fun SearchAndFilterBar(
                         categoryMenuExpanded = false
                     }
                 )
+
                 CategoryMenuItem(
                     title = stringResource(R.string.filter_documents),
                     selected = selectedCategory == IconCategory.DOCUMENT,
@@ -966,6 +978,7 @@ fun SearchAndFilterBar(
                         categoryMenuExpanded = false
                     }
                 )
+
                 CategoryMenuItem(
                     title = stringResource(R.string.filter_other),
                     selected = selectedCategory == IconCategory.OTHER,
@@ -1004,6 +1017,7 @@ fun SearchAndFilterBar(
                         sortMenuExpanded = false
                     }
                 )
+
                 CategoryMenuItem(
                     title = stringResource(R.string.sort_oldest),
                     selected = sortOrder == SortOrder.OLDEST_FIRST,
@@ -1036,145 +1050,6 @@ private fun CategoryMenuItem(
             }
         }
     )
-}
-
-@Composable
-fun SkeletonCard() {
-    var sweepTriggered by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        sweepTriggered = true
-    }
-
-    val shimmerTranslate by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (sweepTriggered) 1400f else -400f,
-        animationSpec = tween(
-            durationMillis = 1200,
-            easing = androidx.compose.animation.core.LinearEasing
-        ),
-        finishedListener = {
-            sweepTriggered = !sweepTriggered
-        },
-        label = "skeleton_shimmer_sweep"
-    )
-
-    val baseColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.14f)
-    val highlightColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
-
-    val shimmerBrush = Brush.linearGradient(
-        colors = listOf(baseColor, highlightColor, baseColor),
-        start = Offset(x = shimmerTranslate - 250f, y = shimmerTranslate - 250f),
-        end = Offset(x = shimmerTranslate, y = shimmerTranslate)
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppDimens.radiusLarge),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(AppDimens.paddingMedium)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(AppDimens.iconTouchTarget)
-                        .clip(CircleShape)
-                        .background(shimmerBrush)
-                )
-                Spacer(modifier = Modifier.width(AppDimens.paddingMedium))
-                Column {
-                    Box(
-                        modifier = Modifier
-                            .height(AppDimens.skeletonHeight)
-                            .width(AppDimens.skeletonWidthLong)
-                            .clip(RoundedCornerShape(AppDimens.radiusSmall))
-                            .background(shimmerBrush)
-                    )
-                    Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
-                    Box(
-                        modifier = Modifier
-                            .height(AppDimens.iconSmall)
-                            .width(AppDimens.skeletonWidthShort)
-                            .clip(RoundedCornerShape(AppDimens.radiusSmall))
-                            .background(shimmerBrush)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(AppDimens.paddingLarge))
-            Box(
-                modifier = Modifier
-                    .height(AppDimens.iconTouchTarget)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(AppDimens.radiusExtraLarge))
-                    .background(shimmerBrush)
-            )
-        }
-    }
-}
-
-@Composable
-fun EmptyStateView(
-    hasActiveFilters: Boolean = false,
-    onResetFilters: () -> Unit = {}
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = AppDimens.paddingExtraLarge),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = null,
-            modifier = Modifier.size(AppDimens.iconEmptyState),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        )
-        Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-        Text(
-            text = stringResource(R.string.empty_title),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
-        Text(
-            text = stringResource(R.string.empty_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (hasActiveFilters) {
-            Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-            Button(onClick = onResetFilters) {
-                Text(stringResource(R.string.action_reset_filters))
-            }
-        }
-    }
-}
-
-@Composable
-fun ErrorStateView(message: String, onRetry: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = AppDimens.paddingExtraLarge),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.WifiOff,
-            contentDescription = null,
-            modifier = Modifier.size(AppDimens.iconEmptyState),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        )
-        Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-        Button(onClick = onRetry) {
-            Text(stringResource(R.string.action_retry))
-        }
-    }
 }
 
 private val previewFoundItems = listOf(
