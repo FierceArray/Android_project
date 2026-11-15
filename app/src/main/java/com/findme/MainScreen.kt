@@ -1,19 +1,31 @@
 package com.findme
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
@@ -31,12 +43,32 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -47,8 +79,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.findme.ui.theme.AppDimens
 import com.findme.ui.theme.FindMeTheme
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -66,6 +96,12 @@ fun MainScreenContainer(
 
     val context = LocalContext.current
     val foldInfo = rememberFoldUiInfo(context.findActivity())
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    var isSearchFocused by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val isImeVisible = WindowInsets.ime.getBottom(density) > 0
 
     LaunchedEffect(allRepoItems) {
         viewModel.refreshFeed()
@@ -74,11 +110,18 @@ fun MainScreenContainer(
     val initialRoutes = remember {
         if (!deepLinkItemId.isNullOrBlank()) {
             val typeSeg = deepLinkType ?: ItemType.FOUND.pathSegment
-            viewModel.syncRoleFromDeepLink(typeSeg)
+            viewModel.syncRoleFromDeepLink(typeSeg, deepLinkItemId)
             arrayOf<NavKey>(
                 RoleSelectionRoute,
                 FeedListRoute,
                 ItemDetailRoute(typeSegment = typeSeg, itemId = deepLinkItemId)
+            )
+        } else if (uiState.selectedRole != null && !uiState.activeItemId.isNullOrBlank()) {
+            val typeSeg = uiState.activeItemType ?: ItemType.FOUND.pathSegment
+            arrayOf<NavKey>(
+                RoleSelectionRoute,
+                FeedListRoute,
+                ItemDetailRoute(typeSegment = typeSeg, itemId = uiState.activeItemId!!)
             )
         } else if (uiState.selectedRole != null) {
             arrayOf<NavKey>(RoleSelectionRoute, FeedListRoute)
@@ -90,11 +133,21 @@ fun MainScreenContainer(
     val backStack = rememberNavBackStack(*initialRoutes)
     var handledDeepLinkEventId by rememberSaveable { mutableIntStateOf(0) }
 
+    LaunchedEffect(uiState.selectedRole, uiState.activeItemId) {
+        if (uiState.selectedRole != null && backStack.size == 1 && backStack.lastOrNull() is RoleSelectionRoute) {
+            backStack.add(FeedListRoute)
+            if (!uiState.activeItemId.isNullOrBlank()) {
+                val typeSeg = uiState.activeItemType ?: ItemType.FOUND.pathSegment
+                backStack.add(ItemDetailRoute(typeSegment = typeSeg, itemId = uiState.activeItemId!!))
+            }
+        }
+    }
+
     LaunchedEffect(deepLinkEventId, deepLinkType, deepLinkItemId) {
         if (deepLinkEventId > handledDeepLinkEventId && !deepLinkItemId.isNullOrBlank()) {
             handledDeepLinkEventId = deepLinkEventId
             val typeSeg = deepLinkType ?: ItemType.FOUND.pathSegment
-            viewModel.syncRoleFromDeepLink(typeSeg)
+            viewModel.syncRoleFromDeepLink(typeSeg, deepLinkItemId)
             backStack.clear()
             backStack.add(RoleSelectionRoute)
             backStack.add(FeedListRoute)
@@ -121,10 +174,22 @@ fun MainScreenContainer(
 
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val directive = calculatePaneScaffoldDirective(adaptiveInfo)
+    val isMultiPane = directive.maxHorizontalPartitions > 1
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>(
         directive = directive,
         backNavigationBehavior = BackNavigationBehavior.PopLatest
     )
+
+    val topRoute = backStack.lastOrNull()
+    val isFeedVisible = topRoute is FeedListRoute || (isMultiPane && topRoute is ItemDetailRoute)
+    val showFeedBottomControls = isFeedVisible && !isSearchFocused && !isImeVisible
+
+    LaunchedEffect(isImeVisible) {
+        if (!isImeVisible && isSearchFocused) {
+            isSearchFocused = false
+            focusManager.clearFocus()
+        }
+    }
 
     FindMeTheme(
         themeMode = uiState.settings.themeMode,
@@ -133,32 +198,47 @@ fun MainScreenContainer(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            contentWindowInsets = WindowInsets.safeDrawing
+            contentWindowInsets = WindowInsets.systemBars
         ) { innerPadding ->
             val bottomInset = innerPadding.calculateBottomPadding()
-            Column(
+            val layoutDirection = LocalLayoutDirection.current
+
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(
                         top = innerPadding.calculateTopPadding(),
-                        start = innerPadding.calculateStartPadding(androidx.compose.ui.platform.LocalLayoutDirection.current),
-                        end = innerPadding.calculateEndPadding(androidx.compose.ui.platform.LocalLayoutDirection.current)
+                        start = innerPadding.calculateStartPadding(layoutDirection),
+                        end = innerPadding.calculateEndPadding(layoutDirection)
                     )
             ) {
-                if (foldInfo.posture != FoldPosture.NORMAL) {
-                    FoldPostureBanner(posture = foldInfo.posture)
-                }
-
                 NavDisplay(
                     backStack = backStack,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxSize(),
                     onBack = {
+                        isSearchFocused = false
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
                         if (backStack.size > 1) {
                             val popped = backStack.removeLastOrNull()
-                            if (popped is FeedListRoute) {
+                            if (popped is ItemDetailRoute) {
+                                viewModel.onAction(MainAction.SetActiveItem(null, null))
+                            } else if (popped is FeedListRoute) {
                                 viewModel.onAction(MainAction.NavigateBackToRoles)
                             }
                         }
+                    },
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(220)) togetherWith
+                                fadeOut(animationSpec = tween(220))
+                    },
+                    popTransitionSpec = {
+                        fadeIn(animationSpec = tween(220)) togetherWith
+                                fadeOut(animationSpec = tween(220))
+                    },
+                    predictivePopTransitionSpec = {
+                        fadeIn(animationSpec = tween(220)) togetherWith
+                                fadeOut(animationSpec = tween(220))
                     },
                     sceneStrategies = listOf(listDetailStrategy),
                     entryDecorators = listOf(
@@ -190,29 +270,68 @@ fun MainScreenContainer(
                                 }
                             )
                         ) {
-                            val defaultCreateType = if (uiState.selectedRole == AppRole.LOST_SOMETHING) {
-                                ItemType.LOST.pathSegment
-                            } else {
-                                ItemType.FOUND.pathSegment
-                            }
                             FeedListPane(
                                 state = uiState,
                                 bottomInset = bottomInset,
+                                showBottomBar = showFeedBottomControls,
+                                showFabInsidePane = !isMultiPane,
+                                onSearchFocusChanged = { focused ->
+                                    isSearchFocused = focused
+                                },
                                 onAction = { action ->
                                     when (action) {
                                         MainAction.NavigateBackToRoles -> {
-                                            viewModel.onAction(MainAction.NavigateBackToRoles)
-                                            if (backStack.size > 1) backStack.removeLastOrNull()
+                                            isSearchFocused = false
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                            if (uiState.isMyReportsTab) {
+                                                viewModel.onAction(MainAction.SetMyReportsTab(false))
+                                            } else {
+                                                viewModel.onAction(MainAction.NavigateBackToRoles)
+                                                if (backStack.size > 1) backStack.removeLastOrNull()
+                                            }
                                         }
-                                        MainAction.OpenSettings -> backStack.add(SettingsRoute)
                                         else -> viewModel.onAction(action)
                                     }
                                 },
                                 onItemClick = { item ->
+                                    isSearchFocused = false
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                    viewModel.onAction(MainAction.SetActiveItem(item.type.pathSegment, item.id))
                                     backStack.selectItemInPane(item.type.pathSegment, item.id)
                                 },
                                 onCreateClick = {
-                                    backStack.add(EditItemRoute(itemId = null, defaultTypeSegment = defaultCreateType))
+                                    isSearchFocused = false
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                    val defaultCreateType = if (uiState.selectedRole == AppRole.LOST_SOMETHING) {
+                                        ItemType.LOST.pathSegment
+                                    } else {
+                                        ItemType.FOUND.pathSegment
+                                    }
+                                    backStack.add(
+                                        EditItemRoute(
+                                            itemId = null,
+                                            defaultTypeSegment = defaultCreateType
+                                        )
+                                    )
+                                },
+                                onOpenProfile = {
+                                    isSearchFocused = false
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                    if (backStack.lastOrNull() != ProfileRoute) {
+                                        backStack.add(ProfileRoute)
+                                    }
+                                },
+                                onOpenSettings = {
+                                    isSearchFocused = false
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                    if (backStack.lastOrNull() != SettingsRoute) {
+                                        backStack.add(SettingsRoute)
+                                    }
                                 },
                                 onShareItem = onShareItem
                             )
@@ -229,6 +348,7 @@ fun MainScreenContainer(
                                     item = item,
                                     foldPosture = foldInfo.posture,
                                     onBackClick = {
+                                        viewModel.onAction(MainAction.SetActiveItem(null, null))
                                         if (backStack.size > 1) backStack.removeLastOrNull()
                                     },
                                     onShareClick = { onShareItem(item) },
@@ -252,6 +372,7 @@ fun MainScreenContainer(
                             } else {
                                 ErrorScreen(
                                     onBackClick = {
+                                        viewModel.onAction(MainAction.SetActiveItem(null, null))
                                         if (backStack.size > 1) backStack.removeLastOrNull()
                                     },
                                     modifier = Modifier.padding(bottom = bottomInset)
@@ -267,13 +388,8 @@ fun MainScreenContainer(
                                 defaultTypeSegment = route.defaultTypeSegment,
                                 foldPosture = foldInfo.posture,
                                 onSaved = { savedItem ->
-                                    val roleForSaved = if (savedItem.type == ItemType.FOUND) {
-                                        AppRole.LOST_SOMETHING
-                                    } else {
-                                        AppRole.FOUND_SOMETHING
-                                    }
-                                    viewModel.onAction(MainAction.SelectRole(roleForSaved))
                                     viewModel.onAction(MainAction.NotifyReportSaved)
+                                    viewModel.onAction(MainAction.SetActiveItem(savedItem.type.pathSegment, savedItem.id))
                                     backStack.removeLastOrNull()
                                     backStack.selectItemInPane(savedItem.type.pathSegment, savedItem.id)
                                 },
@@ -318,29 +434,151 @@ fun MainScreenContainer(
                         }
                     }
                 )
+
+                AnimatedVisibility(
+                    visible = showFeedBottomControls && isMultiPane,
+                    enter = fadeIn(tween(180)),
+                    exit = fadeOut(tween(180)),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            end = AppDimens.paddingMedium,
+                            bottom = bottomInset + AppDimens.paddingMedium
+                        )
+                ) {
+                    val defaultCreateType = if (uiState.selectedRole == AppRole.LOST_SOMETHING) {
+                        ItemType.LOST.pathSegment
+                    } else {
+                        ItemType.FOUND.pathSegment
+                    }
+                    FloatingActionButton(
+                        onClick = {
+                            isSearchFocused = false
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            backStack.add(
+                                EditItemRoute(
+                                    itemId = null,
+                                    defaultTypeSegment = defaultCreateType
+                                )
+                            )
+                        },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.background
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
+                    }
+                }
             }
         }
-        }
     }
-
+}
 
 @Composable
-private fun FoldPostureBanner(posture: FoldPosture) {
-    val text = when (posture) {
-        FoldPosture.BOOK -> stringResource(R.string.fold_book_mode)
-        FoldPosture.TABLETOP -> stringResource(R.string.fold_tabletop_mode)
-        FoldPosture.NORMAL -> return
-    }
+private fun FloatingOvalBottomBar(
+    isMyReportsTab: Boolean,
+    onSelectFeedTab: () -> Unit,
+    onSelectMyReportsTab: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Surface(
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OvalBarItem(
+                icon = Icons.AutoMirrored.Filled.List,
+                label = stringResource(R.string.nav_feed),
+                selected = !isMyReportsTab,
+                onClick = onSelectFeedTab,
+                modifier = Modifier.weight(1f)
+            )
+            OvalBarItem(
+                icon = Icons.AutoMirrored.Filled.Assignment,
+                label = stringResource(R.string.nav_my_reports),
+                selected = isMyReportsTab,
+                onClick = onSelectMyReportsTab,
+                modifier = Modifier.weight(1f)
+            )
+            OvalBarItem(
+                icon = Icons.Default.Notifications,
+                label = stringResource(R.string.nav_notifications),
+                selected = false,
+                onClick = onNotificationsClick,
+                modifier = Modifier.weight(1f)
+            )
+            OvalBarItem(
+                icon = Icons.Default.Person,
+                label = stringResource(R.string.nav_profile),
+                selected = false,
+                onClick = onProfileClick,
+                modifier = Modifier.weight(1f)
+            )
+            OvalBarItem(
+                icon = Icons.Default.Settings,
+                label = stringResource(R.string.nav_settings),
+                selected = false,
+                onClick = onSettingsClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun OvalBarItem(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+    } else {
+        Color.Transparent
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Column(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(containerColor)
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { role = Role.Tab }
+            .padding(vertical = 6.dp, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = AppDimens.paddingSmall, horizontal = AppDimens.paddingMedium)
+            text = label,
+            style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -376,26 +614,31 @@ fun FeedListPane(
     state: MainUiState,
     onAction: (MainAction) -> Unit,
     onItemClick: (LostItem) -> Unit,
-    onCreateClick: () -> Unit,
     onShareItem: (LostItem) -> Unit,
     modifier: Modifier = Modifier,
-    bottomInset: androidx.compose.ui.unit.Dp = AppDimens.paddingSmall
+    bottomInset: Dp = 0.dp,
+    showBottomBar: Boolean = true,
+    showFabInsidePane: Boolean = true,
+    onSearchFocusChanged: (Boolean) -> Unit = {},
+    onCreateClick: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
 ) {
     val role = state.selectedRole ?: AppRole.LOST_SOMETHING
-    val screenTitle = if (role == AppRole.LOST_SOMETHING) {
-        stringResource(R.string.feed_lost_title)
-    } else {
-        stringResource(R.string.feed_found_title)
+    val screenTitle = when {
+        state.isMyReportsTab -> stringResource(R.string.feed_my_title)
+        role == AppRole.LOST_SOMETHING -> stringResource(R.string.feed_lost_title)
+        else -> stringResource(R.string.feed_found_title)
     }
-    val bannerTitle = if (role == AppRole.LOST_SOMETHING) {
-        stringResource(R.string.banner_lost_title)
-    } else {
-        stringResource(R.string.banner_found_title)
+    val bannerTitle = when {
+        state.isMyReportsTab -> stringResource(R.string.banner_my_title)
+        role == AppRole.LOST_SOMETHING -> stringResource(R.string.banner_lost_title)
+        else -> stringResource(R.string.banner_found_title)
     }
-    val bannerSubtitle = if (role == AppRole.LOST_SOMETHING) {
-        stringResource(R.string.banner_lost_desc)
-    } else {
-        stringResource(R.string.banner_found_desc)
+    val bannerSubtitle = when {
+        state.isMyReportsTab -> stringResource(R.string.banner_my_desc)
+        role == AppRole.LOST_SOMETHING -> stringResource(R.string.banner_lost_desc)
+        else -> stringResource(R.string.banner_found_desc)
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -404,10 +647,10 @@ fun FeedListPane(
             contentPadding = PaddingValues(
                 start = AppDimens.paddingMedium,
                 end = AppDimens.paddingMedium,
-                top = AppDimens.paddingMedium,
-                bottom = bottomInset + AppDimens.fabBottomSpace
+                top = AppDimens.paddingSmall,
+                bottom = bottomInset + 148.dp
             ),
-            verticalArrangement = Arrangement.spacedBy(AppDimens.paddingMedium)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
                 Row(
@@ -416,7 +659,7 @@ fun FeedListPane(
                 ) {
                     IconButton(
                         onClick = { onAction(MainAction.NavigateBackToRoles) },
-                        modifier = Modifier.padding(end = AppDimens.paddingSmall)
+                        modifier = Modifier.padding(end = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -432,20 +675,6 @@ fun FeedListPane(
                             .weight(1f)
                             .semantics { heading() }
                     )
-                    IconButton(onClick = { onAction(MainAction.NotificationsClicked) }) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = stringResource(R.string.cd_notifications),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(onClick = { onAction(MainAction.OpenSettings) }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.cd_settings),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                 }
             }
 
@@ -456,7 +685,7 @@ fun FeedListPane(
                     ),
                     shape = RoundedCornerShape(AppDimens.radiusMedium)
                 ) {
-                    Row(modifier = Modifier.padding(AppDimens.paddingMedium)) {
+                    Row(modifier = Modifier.padding(12.dp)) {
                         Icon(
                             imageVector = Icons.Default.Shield,
                             contentDescription = null,
@@ -483,12 +712,11 @@ fun FeedListPane(
                 SearchAndFilterBar(
                     query = state.searchQuery,
                     selectedCategory = state.selectedCategory,
-                    onlyMyReports = state.onlyMyReports,
                     sortOrder = state.sortOrder,
                     onQueryChange = { onAction(MainAction.SearchQueryChanged(it)) },
                     onCategorySelect = { onAction(MainAction.SelectCategory(it)) },
-                    onToggleOnlyMyReports = { onAction(MainAction.ToggleOnlyMyReports) },
-                    onSortOrderChange = { onAction(MainAction.ChangeSortOrder(it)) }
+                    onSortOrderChange = { onAction(MainAction.ChangeSortOrder(it)) },
+                    onSearchFocusChanged = onSearchFocusChanged
                 )
             }
 
@@ -541,18 +769,49 @@ fun FeedListPane(
             }
         }
 
-        FloatingActionButton(
-            onClick = onCreateClick,
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.background,
+        AnimatedVisibility(
+            visible = showBottomBar,
+            enter = fadeIn(tween(180)),
+            exit = fadeOut(tween(180)),
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
                 .padding(
+                    start = AppDimens.paddingMedium,
                     end = AppDimens.paddingMedium,
-                    bottom = bottomInset + AppDimens.paddingMedium
+                    bottom = bottomInset + AppDimens.paddingSmall
                 )
         ) {
-            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
+            Box(modifier = Modifier.fillMaxWidth()) {
+                FloatingOvalBottomBar(
+                    isMyReportsTab = state.isMyReportsTab,
+                    onSelectFeedTab = {
+                        onAction(MainAction.SetMyReportsTab(false))
+                    },
+                    onSelectMyReportsTab = {
+                        onAction(MainAction.SetMyReportsTab(true))
+                    },
+                    onNotificationsClick = {
+                        onAction(MainAction.NotificationsClicked)
+                    },
+                    onProfileClick = onOpenProfile,
+                    onSettingsClick = onOpenSettings,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+
+                if (showFabInsidePane) {
+                    FloatingActionButton(
+                        onClick = onCreateClick,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.background,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 68.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
+                    }
+                }
+            }
         }
     }
 }
@@ -561,44 +820,92 @@ fun FeedListPane(
 fun SearchAndFilterBar(
     query: String,
     selectedCategory: IconCategory?,
-    onlyMyReports: Boolean,
     sortOrder: SortOrder,
     onQueryChange: (String) -> Unit,
     onCategorySelect: (IconCategory?) -> Unit,
-    onToggleOnlyMyReports: () -> Unit,
     onSortOrderChange: (SortOrder) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSearchFocusChanged: (Boolean) -> Unit = {}
 ) {
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
-    val hasFilter = selectedCategory != null || onlyMyReports
+    val hasFilter = selectedCategory != null
+
+    var allowSearchFocus by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(allowSearchFocus) {
+        if (allowSearchFocus) {
+            focusRequester.requestFocus()
+        }
+    }
 
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
     ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-            shape = RoundedCornerShape(AppDimens.radiusLarge),
-            label = { Text(stringResource(R.string.search_label)) },
-            leadingIcon = {
-                Icon(imageVector = Icons.Default.Search, contentDescription = null)
-            },
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.search_clear)
-                        )
+        Box(modifier = Modifier.weight(1f)) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .focusProperties { canFocus = allowSearchFocus }
+                    .onFocusChanged { focusState ->
+                        onSearchFocusChanged(focusState.isFocused)
+                        if (!focusState.isFocused) {
+                            allowSearchFocus = false
+                        }
+                    },
+                singleLine = true,
+                shape = CircleShape,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        allowSearchFocus = false
+                        focusManager.clearFocus()
+                    }
+                ),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.search_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = stringResource(R.string.search_clear)
+                            )
+                        }
                     }
                 }
+            )
+
+            if (!allowSearchFocus) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    allowSearchFocus = true
+                                }
+                            )
+                        }
+                )
             }
-        )
+        }
 
         Box {
             FilledTonalIconButton(
@@ -627,15 +934,6 @@ fun SearchAndFilterBar(
                 expanded = categoryMenuExpanded,
                 onDismissRequest = { categoryMenuExpanded = false }
             ) {
-                CategoryMenuItem(
-                    title = stringResource(R.string.filter_only_mine),
-                    selected = onlyMyReports,
-                    onClick = {
-                        onToggleOnlyMyReports()
-                        categoryMenuExpanded = false
-                    }
-                )
-                HorizontalDivider()
                 CategoryMenuItem(
                     title = stringResource(R.string.filter_all),
                     selected = selectedCategory == null,
@@ -746,9 +1044,10 @@ fun SkeletonCard() {
     LaunchedEffect(Unit) {
         sweepTriggered = true
     }
+
     val shimmerTranslate by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (sweepTriggered) 1400f else -400f,
-        animationSpec = androidx.compose.animation.core.tween(
+        animationSpec = tween(
             durationMillis = 1200,
             easing = androidx.compose.animation.core.LinearEasing
         ),
@@ -757,13 +1056,16 @@ fun SkeletonCard() {
         },
         label = "skeleton_shimmer_sweep"
     )
+
     val baseColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.14f)
     val highlightColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(baseColor, highlightColor, baseColor),
         start = Offset(x = shimmerTranslate - 250f, y = shimmerTranslate - 250f),
         end = Offset(x = shimmerTranslate, y = shimmerTranslate)
     )
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(AppDimens.radiusLarge),
@@ -883,7 +1185,7 @@ private val previewFoundItems = listOf(
         description = "Серый смартфон (детали скрыты слепым поиском).",
         location = "Район ст. м. Бауманская",
         createdAtMillis = 1762516800000L,
-        isMine = true,
+        isMine = false,
         photoAttachment = PhotoAttachment.PHONE_PHOTO,
         iconType = IconCategory.ELECTRONICS
     )
@@ -901,7 +1203,6 @@ private fun MainScreenContentPreview() {
                 ),
                 onAction = {},
                 onItemClick = {},
-                onCreateClick = {},
                 onShareItem = {}
             )
         }
@@ -921,7 +1222,6 @@ private fun MainScreenEmptyPreview() {
                 ),
                 onAction = {},
                 onItemClick = {},
-                onCreateClick = {},
                 onShareItem = {}
             )
         }
@@ -940,7 +1240,6 @@ private fun MainScreenErrorPreview() {
                 ),
                 onAction = {},
                 onItemClick = {},
-                onCreateClick = {},
                 onShareItem = {}
             )
         }

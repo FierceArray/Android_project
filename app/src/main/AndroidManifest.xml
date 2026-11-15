@@ -16,7 +16,7 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.FindMe"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="stateAlwaysHidden|adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

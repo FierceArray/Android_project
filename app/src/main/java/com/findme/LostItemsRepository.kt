@@ -16,7 +16,7 @@ object LostItemsRepository {
             description = "Смартфон (детали скрыты слепым поиском). Подтвердите модель и приметы в чате.",
             location = "Район ст. м. Бауманская",
             createdAtMillis = baseTimeMillis - 15 * 60 * 1000L - 342L,
-            isMine = true,
+            isMine = false,
             photoAttachment = PhotoAttachment.PHONE_PHOTO,
             iconType = IconCategory.ELECTRONICS
         ),
@@ -59,7 +59,7 @@ object LostItemsRepository {
             description = "Связка ключей с брелоком (точное число ключей скрыто).",
             location = "Район ВДНХ",
             createdAtMillis = baseTimeMillis - 26 * 3600 * 1000L - 908L,
-            isMine = false,
+            isMine = true,
             photoAttachment = PhotoAttachment.KEYS_PHOTO,
             iconType = IconCategory.OTHER
         ),
@@ -94,7 +94,7 @@ object LostItemsRepository {
             description = "Утерян студенческий билет и пропуск в синей обложке.",
             location = "Район ст. м. Университет",
             createdAtMillis = baseTimeMillis - 22 * 3600 * 1000L - 205L,
-            isMine = true,
+            isMine = false,
             photoAttachment = PhotoAttachment.DOCS_PHOTO,
             iconType = IconCategory.DOCUMENT
         ),
@@ -123,7 +123,11 @@ object LostItemsRepository {
     ): List<LostItem> {
         val targetType = if (role == AppRole.LOST_SOMETHING) ItemType.FOUND else ItemType.LOST
         val sourceList = _allItems.value.filter { item ->
-            if (onlyMine) item.isMine else item.type == targetType
+            if (onlyMine) {
+                item.isMine
+            } else {
+                !item.isMine && item.type == targetType
+            }
         }
         val trimmedQuery = query.trim()
         val filtered = sourceList.filter { item ->

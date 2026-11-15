@@ -11,10 +11,19 @@
 
     <string name="feed_lost_title">Found Items Feed</string>
     <string name="feed_found_title">Lost Items Feed</string>
+    <string name="feed_my_title">My Reports</string>
     <string name="banner_lost_title">Blind search — for your safety</string>
     <string name="banner_lost_desc">Photos and details are hidden. Confirm ownership in chat with the finder.</string>
     <string name="banner_found_title">Found something? Help it get home.</string>
     <string name="banner_found_desc">Check lost reports below or publish a found report so the system matches the owner.</string>
+    <string name="banner_my_title">Manage your reports</string>
+    <string name="banner_my_desc">Here you can view, edit, or delete reports created by you.</string>
+
+    <string name="nav_feed">Feed</string>
+    <string name="nav_my_reports">My reports</string>
+    <string name="nav_notifications">Alerts</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_settings">Settings</string>
 
     <string name="search_label">Search by area or description</string>
     <string name="search_clear">Clear search</string>
@@ -48,12 +57,9 @@
 
     <string name="detail_id_format">Report ID: #%1$s</string>
     <string name="detail_select_placeholder">Select a report from the list to view details</string>
-    <string name="detail_my_badge">Mine</string>
-    <string name="filter_only_mine">Only my reports</string>
     <string name="detail_created_at">Created: %1$s</string>
     <string name="detail_updated_at">Last edited: %1$s</string>
     <string name="detail_change_note">Change note: %1$s</string>
-    <string name="detail_exact_millis">Anti-fraud timestamp: %1$d ms</string>
     <string name="detail_photo_attached">Attached photo: %1$s</string>
     <string name="action_edit_item">Edit</string>
     <string name="action_delete_item">Delete</string>
@@ -129,8 +135,9 @@
     <string name="settings_language_button">Open language settings</string>
 
     <string name="settings_notif_title">Notifications</string>
-    <string name="settings_notif_desc">Receive alerts about automatic matches</string>
+    <string name="settings_notif_desc">Receive alerts about automatic matches and chat messages</string>
     <string name="settings_notif_toggle">Enable match notifications</string>
+    <string name="settings_notif_messages_toggle">Enable new message notifications</string>
 
     <string name="settings_privacy_title">Privacy &amp; Security</string>
     <string name="settings_privacy_desc">Manage profile visibility and chat retention</string>

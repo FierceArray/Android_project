@@ -43,17 +43,20 @@ data class SettingsUiState(
     val appFont: AppFont = AppFont.OPEN_SANS,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val notificationsEnabled: Boolean = true,
+    val messageNotificationsEnabled: Boolean = true,
     val hideLastSeen: Boolean = false,
     val autoDeleteMessages: Boolean = true
 )
 
 data class MainUiState(
     val selectedRole: AppRole? = null,
+    val activeItemType: String? = null,
+    val activeItemId: String? = null,
     val profile: ProfileUiState = ProfileUiState(),
     val settings: SettingsUiState = SettingsUiState(),
     val searchQuery: String = "",
     val selectedCategory: IconCategory? = null,
-    val onlyMyReports: Boolean = false,
+    val isMyReportsTab: Boolean = false,
     val sortOrder: SortOrder = SortOrder.NEWEST_FIRST,
     val feedState: FeedState = FeedState.Loading,
     val userMessage: UserMessage? = null
@@ -62,12 +65,13 @@ data class MainUiState(
         get() = (feedState as? FeedState.Content)?.items?.size ?: 0
 
     val hasActiveFilters: Boolean
-        get() = searchQuery.isNotBlank() || selectedCategory != null || onlyMyReports
+        get() = searchQuery.isNotBlank() || selectedCategory != null
 }
 
 sealed interface MainAction {
     data class SelectRole(val role: AppRole) : MainAction
     data object NavigateBackToRoles : MainAction
+    data class SetActiveItem(val typeSegment: String?, val itemId: String?) : MainAction
     data object OpenProfile : MainAction
     data object CloseProfile : MainAction
     data object StartEditProfile : MainAction
@@ -81,12 +85,13 @@ sealed interface MainAction {
     data class ChangeFont(val font: AppFont) : MainAction
     data class ChangeTheme(val themeMode: ThemeMode) : MainAction
     data class ToggleNotifications(val enabled: Boolean) : MainAction
+    data class ToggleMessageNotifications(val enabled: Boolean) : MainAction
     data class ToggleHideLastSeen(val hide: Boolean) : MainAction
     data class ToggleAutoDeleteMessages(val enabled: Boolean) : MainAction
     data object OpenBlacklistClicked : MainAction
     data class SearchQueryChanged(val query: String) : MainAction
     data class SelectCategory(val category: IconCategory?) : MainAction
-    data object ToggleOnlyMyReports : MainAction
+    data class SetMyReportsTab(val isMyReports: Boolean) : MainAction
     data class ChangeSortOrder(val sortOrder: SortOrder) : MainAction
     data object ResetFilters : MainAction
     data object RetryLoad : MainAction
@@ -103,9 +108,11 @@ class MainViewModel(
 
     companion object {
         private const val KEY_ROLE = "saved_role"
+        private const val KEY_ACTIVE_TYPE = "saved_active_type"
+        private const val KEY_ACTIVE_ID = "saved_active_id"
         private const val KEY_QUERY = "saved_search_query"
         private const val KEY_CATEGORY = "saved_category"
-        private const val KEY_ONLY_MINE = "saved_only_mine"
+        private const val KEY_MY_REPORTS_TAB = "saved_my_reports_tab"
         private const val KEY_SORT = "saved_sort_order"
         private const val KEY_PROFILE_EDITING = "saved_profile_editing"
         private const val KEY_USER_NAME = "saved_user_name"
@@ -117,6 +124,7 @@ class MainViewModel(
         private const val KEY_FONT = "saved_font"
         private const val KEY_THEME = "saved_theme"
         private const val KEY_NOTIF = "saved_notif"
+        private const val KEY_MSG_NOTIF = "saved_msg_notif"
         private const val KEY_HIDE_SEEN = "saved_hide_seen"
         private const val KEY_AUTO_DELETE = "saved_auto_delete"
     }
@@ -128,11 +136,13 @@ class MainViewModel(
         val role = savedStateHandle.get<String>(KEY_ROLE)?.let {
             runCatching { AppRole.valueOf(it) }.getOrNull()
         }
+        val activeType = savedStateHandle.get<String>(KEY_ACTIVE_TYPE)
+        val activeId = savedStateHandle.get<String>(KEY_ACTIVE_ID)
         val query = savedStateHandle.get<String>(KEY_QUERY) ?: ""
         val category = savedStateHandle.get<String>(KEY_CATEGORY)?.let {
             runCatching { IconCategory.valueOf(it) }.getOrNull()
         }
-        val onlyMine = savedStateHandle.get<Boolean>(KEY_ONLY_MINE) ?: false
+        val isMyReportsTab = savedStateHandle.get<Boolean>(KEY_MY_REPORTS_TAB) ?: false
         val sortOrder = savedStateHandle.get<String>(KEY_SORT)?.let {
             runCatching { SortOrder.valueOf(it) }.getOrNull()
         } ?: SortOrder.NEWEST_FIRST
@@ -163,26 +173,29 @@ class MainViewModel(
             appFont = font,
             themeMode = theme,
             notificationsEnabled = savedStateHandle.get<Boolean>(KEY_NOTIF) ?: true,
+            messageNotificationsEnabled = savedStateHandle.get<Boolean>(KEY_MSG_NOTIF) ?: true,
             hideLastSeen = savedStateHandle.get<Boolean>(KEY_HIDE_SEEN) ?: false,
             autoDeleteMessages = savedStateHandle.get<Boolean>(KEY_AUTO_DELETE) ?: true
         )
 
         val effectiveRole = role ?: AppRole.LOST_SOMETHING
-        val feedState = computeFeedState(effectiveRole, query, category, onlyMine, sortOrder)
+        val feedState = computeFeedState(effectiveRole, query, category, isMyReportsTab, sortOrder)
 
         return MainUiState(
             selectedRole = role,
+            activeItemType = activeType,
+            activeItemId = activeId,
             profile = profile,
             settings = settings,
             searchQuery = query,
             selectedCategory = category,
-            onlyMyReports = onlyMine,
+            isMyReportsTab = isMyReportsTab,
             sortOrder = sortOrder,
             feedState = feedState
         )
     }
 
-    fun syncRoleFromDeepLink(typeSegment: String?) {
+    fun syncRoleFromDeepLink(typeSegment: String?, itemId: String? = null) {
         if (typeSegment.isNullOrBlank()) return
         val inferredRole = if (typeSegment == ItemType.LOST.pathSegment) {
             AppRole.FOUND_SOMETHING
@@ -190,14 +203,20 @@ class MainViewModel(
             AppRole.LOST_SOMETHING
         }
         savedStateHandle[KEY_ROLE] = inferredRole.name
+        savedStateHandle[KEY_ACTIVE_TYPE] = typeSegment
+        savedStateHandle[KEY_ACTIVE_ID] = itemId
+        savedStateHandle[KEY_MY_REPORTS_TAB] = false
         _uiState.update { current ->
             current.copy(
                 selectedRole = inferredRole,
+                activeItemType = typeSegment,
+                activeItemId = itemId,
+                isMyReportsTab = false,
                 feedState = computeFeedState(
                     inferredRole,
                     current.searchQuery,
                     current.selectedCategory,
-                    current.onlyMyReports,
+                    false,
                     current.sortOrder
                 )
             )
@@ -212,7 +231,7 @@ class MainViewModel(
                     role,
                     current.searchQuery,
                     current.selectedCategory,
-                    current.onlyMyReports,
+                    current.isMyReportsTab,
                     current.sortOrder
                 )
             )
@@ -223,14 +242,20 @@ class MainViewModel(
         when (action) {
             is MainAction.SelectRole -> {
                 savedStateHandle[KEY_ROLE] = action.role.name
+                savedStateHandle[KEY_ACTIVE_TYPE] = null
+                savedStateHandle[KEY_ACTIVE_ID] = null
+                savedStateHandle[KEY_MY_REPORTS_TAB] = false
                 _uiState.update { current ->
                     current.copy(
                         selectedRole = action.role,
+                        activeItemType = null,
+                        activeItemId = null,
+                        isMyReportsTab = false,
                         feedState = computeFeedState(
                             action.role,
                             current.searchQuery,
                             current.selectedCategory,
-                            current.onlyMyReports,
+                            false,
                             current.sortOrder
                         )
                     )
@@ -238,7 +263,27 @@ class MainViewModel(
             }
             MainAction.NavigateBackToRoles -> {
                 savedStateHandle[KEY_ROLE] = null
-                _uiState.update { it.copy(selectedRole = null) }
+                savedStateHandle[KEY_ACTIVE_TYPE] = null
+                savedStateHandle[KEY_ACTIVE_ID] = null
+                savedStateHandle[KEY_MY_REPORTS_TAB] = false
+                _uiState.update {
+                    it.copy(
+                        selectedRole = null,
+                        activeItemType = null,
+                        activeItemId = null,
+                        isMyReportsTab = false
+                    )
+                }
+            }
+            is MainAction.SetActiveItem -> {
+                savedStateHandle[KEY_ACTIVE_TYPE] = action.typeSegment
+                savedStateHandle[KEY_ACTIVE_ID] = action.itemId
+                _uiState.update {
+                    it.copy(
+                        activeItemType = action.typeSegment,
+                        activeItemId = action.itemId
+                    )
+                }
             }
             MainAction.OpenProfile, MainAction.CloseProfile,
             MainAction.OpenSettings, MainAction.CloseSettings -> {
@@ -334,6 +379,12 @@ class MainViewModel(
                     current.copy(settings = current.settings.copy(notificationsEnabled = action.enabled))
                 }
             }
+            is MainAction.ToggleMessageNotifications -> {
+                savedStateHandle[KEY_MSG_NOTIF] = action.enabled
+                _uiState.update { current ->
+                    current.copy(settings = current.settings.copy(messageNotificationsEnabled = action.enabled))
+                }
+            }
             is MainAction.ToggleHideLastSeen -> {
                 savedStateHandle[KEY_HIDE_SEEN] = action.hide
                 _uiState.update { current ->
@@ -359,7 +410,7 @@ class MainViewModel(
                             role,
                             action.query,
                             current.selectedCategory,
-                            current.onlyMyReports,
+                            current.isMyReportsTab,
                             current.sortOrder
                         )
                     )
@@ -375,24 +426,23 @@ class MainViewModel(
                             role,
                             current.searchQuery,
                             action.category,
-                            current.onlyMyReports,
+                            current.isMyReportsTab,
                             current.sortOrder
                         )
                     )
                 }
             }
-            MainAction.ToggleOnlyMyReports -> {
-                val newOnlyMine = !_uiState.value.onlyMyReports
-                savedStateHandle[KEY_ONLY_MINE] = newOnlyMine
+            is MainAction.SetMyReportsTab -> {
+                savedStateHandle[KEY_MY_REPORTS_TAB] = action.isMyReports
                 _uiState.update { current ->
                     val role = current.selectedRole ?: AppRole.LOST_SOMETHING
                     current.copy(
-                        onlyMyReports = newOnlyMine,
+                        isMyReportsTab = action.isMyReports,
                         feedState = computeFeedState(
                             role,
                             current.searchQuery,
                             current.selectedCategory,
-                            newOnlyMine,
+                            action.isMyReports,
                             current.sortOrder
                         )
                     )
@@ -408,7 +458,7 @@ class MainViewModel(
                             role,
                             current.searchQuery,
                             current.selectedCategory,
-                            current.onlyMyReports,
+                            current.isMyReportsTab,
                             action.sortOrder
                         )
                     )
@@ -417,14 +467,12 @@ class MainViewModel(
             MainAction.ResetFilters -> {
                 savedStateHandle[KEY_QUERY] = ""
                 savedStateHandle[KEY_CATEGORY] = null
-                savedStateHandle[KEY_ONLY_MINE] = false
                 _uiState.update { current ->
                     val role = current.selectedRole ?: AppRole.LOST_SOMETHING
                     current.copy(
                         searchQuery = "",
                         selectedCategory = null,
-                        onlyMyReports = false,
-                        feedState = computeFeedState(role, "", null, false, current.sortOrder)
+                        feedState = computeFeedState(role, "", null, current.isMyReportsTab, current.sortOrder)
                     )
                 }
             }
@@ -438,7 +486,7 @@ class MainViewModel(
                             role,
                             "",
                             current.selectedCategory,
-                            current.onlyMyReports,
+                            current.isMyReportsTab,
                             current.sortOrder
                         )
                     )
@@ -450,14 +498,18 @@ class MainViewModel(
             is MainAction.DeleteItem -> {
                 val deleted = LostItemsRepository.deleteOwnItem(action.itemId)
                 if (deleted) {
+                    savedStateHandle[KEY_ACTIVE_TYPE] = null
+                    savedStateHandle[KEY_ACTIVE_ID] = null
                     _uiState.update { current ->
                         val role = current.selectedRole ?: AppRole.LOST_SOMETHING
                         current.copy(
+                            activeItemType = null,
+                            activeItemId = null,
                             feedState = computeFeedState(
                                 role,
                                 current.searchQuery,
                                 current.selectedCategory,
-                                current.onlyMyReports,
+                                current.isMyReportsTab,
                                 current.sortOrder
                             ),
                             userMessage = UserMessage.ReportDeleted
@@ -466,14 +518,16 @@ class MainViewModel(
                 }
             }
             MainAction.NotifyReportSaved -> {
+                savedStateHandle[KEY_MY_REPORTS_TAB] = true
                 _uiState.update { current ->
                     val role = current.selectedRole ?: AppRole.LOST_SOMETHING
                     current.copy(
+                        isMyReportsTab = true,
                         feedState = computeFeedState(
                             role,
                             current.searchQuery,
                             current.selectedCategory,
-                            current.onlyMyReports,
+                            true,
                             current.sortOrder
                         ),
                         userMessage = UserMessage.ReportSaved

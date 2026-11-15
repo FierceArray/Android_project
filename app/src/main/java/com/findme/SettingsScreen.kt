@@ -63,7 +63,6 @@ fun SettingsScreen(
             )
         }
 
-        // Выбор шрифта приложения: Open Sans, Montserrat, Lato, Inter
         SettingsSectionCard(
             title = stringResource(R.string.settings_font_title),
             subtitle = stringResource(R.string.settings_font_desc),
@@ -104,7 +103,6 @@ fun SettingsScreen(
             }
         }
 
-        // Выбор темы
         SettingsSectionCard(
             title = stringResource(R.string.settings_theme_title),
             subtitle = stringResource(R.string.settings_theme_desc),
@@ -140,7 +138,6 @@ fun SettingsScreen(
             }
         }
 
-        // Язык интерфейса
         SettingsSectionCard(
             title = stringResource(R.string.settings_language_title),
             subtitle = stringResource(R.string.settings_language_desc),
@@ -160,7 +157,6 @@ fun SettingsScreen(
             }
         }
 
-        // Уведомления
         SettingsSectionCard(
             title = stringResource(R.string.settings_notif_title),
             subtitle = stringResource(R.string.settings_notif_desc),
@@ -172,11 +168,18 @@ fun SettingsScreen(
                 )
             }
         ) {
-            SettingsCheckboxRow(
-                title = stringResource(R.string.settings_notif_toggle),
-                checked = settings.notificationsEnabled,
-                onCheckedChange = { onAction(MainAction.ToggleNotifications(it)) }
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)) {
+                SettingsCheckboxRow(
+                    title = stringResource(R.string.settings_notif_toggle),
+                    checked = settings.notificationsEnabled,
+                    onCheckedChange = { onAction(MainAction.ToggleNotifications(it)) }
+                )
+                SettingsCheckboxRow(
+                    title = stringResource(R.string.settings_notif_messages_toggle),
+                    checked = settings.messageNotificationsEnabled,
+                    onCheckedChange = { onAction(MainAction.ToggleMessageNotifications(it)) }
+                )
+            }
         }
 
         // Конфиденциальность

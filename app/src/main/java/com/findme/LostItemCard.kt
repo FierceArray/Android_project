@@ -20,10 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.findme.ui.theme.AppDimens
 
 @Composable
@@ -39,7 +37,6 @@ fun LostItemCard(
     } else {
         stringResource(R.string.action_contact_owner)
     }
-    val myBadgeDescription = stringResource(R.string.detail_my_badge)
 
     Card(
         onClick = onItemClick,
@@ -91,29 +88,18 @@ fun LostItemCard(
                         )
                     }
                 }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    IconButton(onClick = onShareClick) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.cd_share),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    if (item.isMine) {
-                        Box(
-                            modifier = Modifier
-                                .width(24.dp)
-                                .height(8.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary)
-                                .semantics { contentDescription = myBadgeDescription }
-                        )
-                    }
+
+                IconButton(onClick = onShareClick) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = stringResource(R.string.cd_share),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
+
             Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
@@ -146,16 +132,19 @@ fun LostItemCard(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
-            Button(
-                onClick = onContactClick,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Text(
-                    text = contactButtonText,
-                    color = MaterialTheme.colorScheme.background
-                )
+
+            if (!item.isMine) {
+                Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
+                Button(
+                    onClick = onContactClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(
+                        text = contactButtonText,
+                        color = MaterialTheme.colorScheme.background
+                    )
+                }
             }
         }
     }

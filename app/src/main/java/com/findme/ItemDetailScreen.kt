@@ -85,21 +85,12 @@ fun ItemDetailScreen(
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (item.isMine) {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(stringResource(R.string.detail_my_badge)) }
-                    )
-                    Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
-                }
-                IconButton(onClick = onShareClick) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = stringResource(R.string.cd_share),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+            IconButton(onClick = onShareClick) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = stringResource(R.string.cd_share),
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
 
@@ -152,7 +143,7 @@ fun ItemDetailScreen(
                 item.formattedUpdatedTime?.let { updatedTime ->
                     Text(
                         text = stringResource(R.string.detail_updated_at, updatedTime),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.colorScheme.primary.let { MaterialTheme.typography.bodySmall },
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -163,11 +154,6 @@ fun ItemDetailScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                Text(
-                    text = stringResource(R.string.detail_exact_millis, item.createdAtMillis),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
 
                 if (item.photoAttachment != PhotoAttachment.NONE) {
                     Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
@@ -189,45 +175,40 @@ fun ItemDetailScreen(
             Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
         }
 
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
-        ) {
-            if (item.isMine) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
+        if (item.isMine) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
+            ) {
+                OutlinedButton(
+                    onClick = onEditClick,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    OutlinedButton(
-                        onClick = onEditClick,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            modifier = Modifier.size(AppDimens.iconSmall)
-                        )
-                        Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
-                        Text(stringResource(R.string.action_edit_item))
-                    }
-                    OutlinedButton(
-                        onClick = { showDeleteConfirm = true },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            modifier = Modifier.size(AppDimens.iconSmall)
-                        )
-                        Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
-                        Text(stringResource(R.string.action_delete_item))
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(AppDimens.iconSmall)
+                    )
+                    Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
+                    Text(stringResource(R.string.action_edit_item))
+                }
+                OutlinedButton(
+                    onClick = { showDeleteConfirm = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(AppDimens.iconSmall)
+                    )
+                    Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
+                    Text(stringResource(R.string.action_delete_item))
                 }
             }
-
+        } else {
             Button(
                 onClick = onContactClick,
                 modifier = Modifier.fillMaxWidth(),
