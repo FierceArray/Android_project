@@ -16,11 +16,25 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.FindMe"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="stateAlwaysHidden|adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="findme"
+                    android:host="app"
+                    android:pathPrefix="/lost/" />
+                <data
+                    android:scheme="findme"
+                    android:host="app"
+                    android:pathPrefix="/found/" />
             </intent-filter>
         </activity>
     </application>
