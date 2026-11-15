@@ -1084,7 +1084,25 @@ private fun MainScreenContentPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "2. FeedListPane - Empty")
+@Preview(showBackground = true, name = "2. FeedListPane - Loading")
+@Composable
+private fun MainScreenLoadingPreview() {
+    FindMeTheme(dynamicColor = false) {
+        Surface {
+            FeedListPane(
+                state = MainUiState(
+                    selectedRole = AppRole.LOST_SOMETHING,
+                    feedState = FeedState.Loading
+                ),
+                onAction = {},
+                onItemClick = {},
+                onShareItem = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "3. FeedListPane - Empty")
 @Composable
 private fun MainScreenEmptyPreview() {
     FindMeTheme(dynamicColor = false) {
@@ -1103,7 +1121,7 @@ private fun MainScreenEmptyPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "3. FeedListPane - Error")
+@Preview(showBackground = true, name = "4. FeedListPane - Error")
 @Composable
 private fun MainScreenErrorPreview() {
     FindMeTheme(dynamicColor = false) {
