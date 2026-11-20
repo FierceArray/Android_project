@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -74,13 +75,29 @@ fun LostItemCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+
                     Spacer(modifier = Modifier.width(AppDimens.paddingMedium))
+
                     Column {
-                        Text(
-                            text = item.category,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = item.category,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            if (item.isVerified) {
+                                Spacer(modifier = Modifier.width(AppDimens.radiusSmall))
+
+                                Icon(
+                                    imageVector = Icons.Default.Verified,
+                                    contentDescription = stringResource(R.string.badge_verified),
+                                    modifier = Modifier.size(AppDimens.iconSmall),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
                         Text(
                             text = item.location,
                             style = MaterialTheme.typography.bodyMedium,
@@ -110,11 +127,13 @@ fun LostItemCard(
                     modifier = Modifier.size(AppDimens.iconSmall),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
                 Text(
                     text = item.formattedCreatedTime,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
                 if (item.updatedAtMillis != null) {
                     Icon(
                         imageVector = Icons.Default.EditNote,
@@ -123,6 +142,7 @@ fun LostItemCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+
                 if (item.photoAttachment != PhotoAttachment.NONE) {
                     Icon(
                         imageVector = Icons.Default.Image,
@@ -135,6 +155,7 @@ fun LostItemCard(
 
             if (!item.isMine) {
                 Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
+
                 Button(
                     onClick = onContactClick,
                     modifier = Modifier.fillMaxWidth(),

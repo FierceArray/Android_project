@@ -32,6 +32,7 @@ data class LostItem(
     val updatedAtMillis: Long? = null,
     val changeNote: String? = null,
     val isMine: Boolean = false,
+    val isVerified: Boolean = false,
     val photoAttachment: PhotoAttachment = PhotoAttachment.NONE,
     val iconType: IconCategory
 ) {

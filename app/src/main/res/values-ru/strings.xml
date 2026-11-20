@@ -37,25 +37,28 @@
     <string name="sort_oldest">Сначала старые</string>
     <string name="found_count_label">Найдено анкет: %1$d</string>
 
-    <string name="empty_title">Пока ничего нет</string>
-    <string name="empty_subtitle">По вашему запросу или фильтру анкет не найдено. Попробуйте сбросить фильтры.</string>
+    <string name="empty_list_title">В этом разделе пока пусто</string>
+    <string name="empty_list_subtitle">Здесь ещё нет ни одной анкеты. Нажмите +, чтобы создать первую анкету.</string>
+    <string name="empty_search_title">По запросу ничего не найдено</string>
+    <string name="empty_search_subtitle">Нет анкет, подходящих под ваш поисковый запрос или выбранную категорию.</string>
     <string name="action_retry">Повторить попытку</string>
-    <string name="action_reset_filters">Сбросить фильтры</string>
+    <string name="action_reset_filters">Сбросить поиск и фильтры</string>
     <string name="error_network">Не удалось загрузить ленту. Проверьте соединение.</string>
+    <string name="warning_metadata_partial">Сервис проверки безопасности временно недоступен (показаны частичные данные без меток верификации).</string>
+    <string name="badge_verified">Проверено</string>
 
     <string name="action_contact_finder">Связаться с нашедшим</string>
     <string name="action_contact_owner">Связаться с владельцем</string>
     <string name="share_message_found">Смотри, нашлась вещь: %1$s</string>
     <string name="share_message_lost">Помогите найти потерянную вещь: %1$s</string>
 
-    <string name="toast_chat">Открытие защищенного чата по анкете #%1$s...</string>
+    <string name="toast_chat">Открытие защищенного чата по анкете...</string>
     <string name="toast_create">Анкета успешно сохранена</string>
     <string name="toast_deleted">Анкета удалена</string>
     <string name="toast_notifications">Новых уведомлений нет</string>
     <string name="toast_blacklist">Чёрный список пуст</string>
     <string name="toast_profile_saved">Профиль сохранён</string>
 
-    <string name="detail_id_format">Анкета ID: #%1$s</string>
     <string name="detail_select_placeholder">Выберите анкету в списке слева, чтобы посмотреть подробности</string>
     <string name="detail_created_at">Создано: %1$s</string>
     <string name="detail_updated_at">Изменено: %1$s</string>
@@ -84,9 +87,6 @@
     <string name="dialog_exit_message">Вы изменили данные анкеты. Если выйти сейчас, изменения потеряются.</string>
     <string name="action_discard">Выйти</string>
     <string name="action_stay">Остаться</string>
-
-    <string name="fold_book_mode">Режим Book (книга): панели разделены сгибом экрана</string>
-    <string name="fold_tabletop_mode">Режим Tabletop (ноутбук): контент сверху, управление под линией сгиба</string>
 
     <string name="error_item_not_found">Анкета не найдена или ссылка повреждена</string>
     <string name="action_back_to_list">Вернуться к списку</string>

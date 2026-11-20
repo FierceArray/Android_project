@@ -2,18 +2,39 @@ package com.findme
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.findme.ui.theme.AppFont
 import com.findme.ui.theme.ThemeMode
+import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
 sealed interface FeedState {
     data object Loading : FeedState
     data object Empty : FeedState
+    data object EmptySearch : FeedState
     data object Error : FeedState
-    data class Content(val items: List<LostItem>) : FeedState
+    data class Content(
+        val items: List<LostItem>,
+        val isMetadataAvailable: Boolean = true
+    ) : FeedState
 }
 
 sealed interface UserMessage {
@@ -68,6 +89,22 @@ data class MainUiState(
         get() = searchQuery.isNotBlank() || selectedCategory != null
 }
 
+private data class FilterParams(
+    val role: AppRole?,
+    val category: IconCategory?,
+    val isMyReportsTab: Boolean,
+    val sortOrder: SortOrder,
+    val retryTick: Int
+)
+
+private data class ChromeState(
+    val activeItemType: String? = null,
+    val activeItemId: String? = null,
+    val profile: ProfileUiState = ProfileUiState(),
+    val settings: SettingsUiState = SettingsUiState(),
+    val userMessage: UserMessage? = null
+)
+
 sealed interface MainAction {
     data class SelectRole(val role: AppRole) : MainAction
     data object NavigateBackToRoles : MainAction
@@ -102,6 +139,7 @@ sealed interface MainAction {
     data object UserMessageShown : MainAction
 }
 
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class MainViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -129,23 +167,107 @@ class MainViewModel(
         private const val KEY_AUTO_DELETE = "saved_auto_delete"
     }
 
-    private val _uiState = MutableStateFlow(createInitialState())
-    val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+    val query: StateFlow<String> = savedStateHandle.getStateFlow(KEY_QUERY, "")
 
-    private fun createInitialState(): MainUiState {
-        val role = savedStateHandle.get<String>(KEY_ROLE)?.let {
-            runCatching { AppRole.valueOf(it) }.getOrNull()
+    private val roleFlow: StateFlow<String?> = savedStateHandle.getStateFlow(KEY_ROLE, null)
+    private val categoryFlow: StateFlow<String?> = savedStateHandle.getStateFlow(KEY_CATEGORY, null)
+    private val isMyReportsTabFlow: StateFlow<Boolean> = savedStateHandle.getStateFlow(KEY_MY_REPORTS_TAB, false)
+    private val sortOrderFlow: StateFlow<String> = savedStateHandle.getStateFlow(KEY_SORT, SortOrder.NEWEST_FIRST.name)
+    private val retryTrigger = MutableStateFlow(0)
+
+    private val chromeState = MutableStateFlow(createInitialChromeState())
+
+    private val debouncedQuery: Flow<String> = query
+        .map { text -> text.trim() }
+        .debounce(300.milliseconds)
+        .distinctUntilChanged()
+
+    private val filterParamsFlow: Flow<FilterParams> = combine(
+        roleFlow,
+        categoryFlow,
+        isMyReportsTabFlow,
+        sortOrderFlow,
+        retryTrigger
+    ) { roleName, categoryName, isMyTab, sortName, retryTick ->
+        val role = roleName?.let { runCatching { AppRole.valueOf(it) }.getOrNull() }
+        val category = categoryName?.let { runCatching { IconCategory.valueOf(it) }.getOrNull() }
+        val sort = runCatching { SortOrder.valueOf(sortName) }.getOrDefault(SortOrder.NEWEST_FIRST)
+        FilterParams(
+            role = role,
+            category = category,
+            isMyReportsTab = isMyTab,
+            sortOrder = sort,
+            retryTick = retryTick
+        )
+    }
+
+    private val searchRequestFlow: Flow<SearchRequest> = combine(
+        debouncedQuery,
+        filterParamsFlow,
+        LostItemsRepository.allItems
+    ) { normalizedQuery, params, _ ->
+        SearchRequest(
+            role = params.role ?: AppRole.LOST_SOMETHING,
+            query = normalizedQuery,
+            category = params.category,
+            onlyMine = params.isMyReportsTab,
+            sortOrder = params.sortOrder
+        )
+    }
+
+    private val feedStateFlow: Flow<FeedState> = searchRequestFlow
+        .flatMapLatest { request ->
+            flow<FeedState> {
+                emit(FeedState.Loading)
+                val result = LostItemsRepository.searchItemsAsync(request)
+                val nextState = when {
+                    result.items.isNotEmpty() -> FeedState.Content(
+                        items = result.items,
+                        isMetadataAvailable = result.isMetadataAvailable
+                    )
+                    result.totalInSectionCount == 0 && request.query.isEmpty() && request.category == null -> {
+                        FeedState.Empty
+                    }
+                    else -> FeedState.EmptySearch
+                }
+                emit(nextState)
+            }.catch { error ->
+                if (error is IOException) {
+                    emit(FeedState.Error)
+                } else {
+                    throw error
+                }
+            }
         }
+
+    val uiState: StateFlow<MainUiState> = combine(
+        query,
+        filterParamsFlow,
+        feedStateFlow,
+        chromeState
+    ) { rawQuery, params, feed, chrome ->
+        MainUiState(
+            selectedRole = params.role,
+            activeItemType = chrome.activeItemType,
+            activeItemId = chrome.activeItemId,
+            profile = chrome.profile,
+            settings = chrome.settings,
+            searchQuery = rawQuery,
+            selectedCategory = params.category,
+            isMyReportsTab = params.isMyReportsTab,
+            sortOrder = params.sortOrder,
+            feedState = feed,
+            userMessage = chrome.userMessage
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5.seconds),
+        initialValue = createInitialUiState()
+    )
+
+    private fun createInitialChromeState(): ChromeState {
         val activeType = savedStateHandle.get<String>(KEY_ACTIVE_TYPE)
         val activeId = savedStateHandle.get<String>(KEY_ACTIVE_ID)
-        val query = savedStateHandle.get<String>(KEY_QUERY) ?: ""
-        val category = savedStateHandle.get<String>(KEY_CATEGORY)?.let {
-            runCatching { IconCategory.valueOf(it) }.getOrNull()
-        }
-        val isMyReportsTab = savedStateHandle.get<Boolean>(KEY_MY_REPORTS_TAB) ?: false
-        val sortOrder = savedStateHandle.get<String>(KEY_SORT)?.let {
-            runCatching { SortOrder.valueOf(it) }.getOrNull()
-        } ?: SortOrder.NEWEST_FIRST
 
         val savedName = savedStateHandle.get<String>(KEY_USER_NAME) ?: "Алексей Смирнов"
         val savedNick = savedStateHandle.get<String>(KEY_USER_NICK) ?: "sherlock_mephi"
@@ -178,20 +300,33 @@ class MainViewModel(
             autoDeleteMessages = savedStateHandle.get<Boolean>(KEY_AUTO_DELETE) ?: true
         )
 
-        val effectiveRole = role ?: AppRole.LOST_SOMETHING
-        val feedState = computeFeedState(effectiveRole, query, category, isMyReportsTab, sortOrder)
-
-        return MainUiState(
-            selectedRole = role,
+        return ChromeState(
             activeItemType = activeType,
             activeItemId = activeId,
             profile = profile,
             settings = settings,
-            searchQuery = query,
+            userMessage = null
+        )
+    }
+
+    private fun createInitialUiState(): MainUiState {
+        val chrome = chromeState.value
+        val role = roleFlow.value?.let { runCatching { AppRole.valueOf(it) }.getOrNull() }
+        val category = categoryFlow.value?.let { runCatching { IconCategory.valueOf(it) }.getOrNull() }
+        val sort = runCatching { SortOrder.valueOf(sortOrderFlow.value) }.getOrDefault(SortOrder.NEWEST_FIRST)
+
+        return MainUiState(
+            selectedRole = role,
+            activeItemType = chrome.activeItemType,
+            activeItemId = chrome.activeItemId,
+            profile = chrome.profile,
+            settings = chrome.settings,
+            searchQuery = query.value,
             selectedCategory = category,
-            isMyReportsTab = isMyReportsTab,
-            sortOrder = sortOrder,
-            feedState = feedState
+            isMyReportsTab = isMyReportsTabFlow.value,
+            sortOrder = sort,
+            feedState = FeedState.Loading,
+            userMessage = chrome.userMessage
         )
     }
 
@@ -206,36 +341,16 @@ class MainViewModel(
         savedStateHandle[KEY_ACTIVE_TYPE] = typeSegment
         savedStateHandle[KEY_ACTIVE_ID] = itemId
         savedStateHandle[KEY_MY_REPORTS_TAB] = false
-        _uiState.update { current ->
-            current.copy(
-                selectedRole = inferredRole,
+        chromeState.update {
+            it.copy(
                 activeItemType = typeSegment,
-                activeItemId = itemId,
-                isMyReportsTab = false,
-                feedState = computeFeedState(
-                    inferredRole,
-                    current.searchQuery,
-                    current.selectedCategory,
-                    false,
-                    current.sortOrder
-                )
+                activeItemId = itemId
             )
         }
     }
 
     fun refreshFeed() {
-        _uiState.update { current ->
-            val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-            current.copy(
-                feedState = computeFeedState(
-                    role,
-                    current.searchQuery,
-                    current.selectedCategory,
-                    current.isMyReportsTab,
-                    current.sortOrder
-                )
-            )
-        }
+        retryTrigger.update { it + 1 }
     }
 
     fun onAction(action: MainAction) {
@@ -245,19 +360,10 @@ class MainViewModel(
                 savedStateHandle[KEY_ACTIVE_TYPE] = null
                 savedStateHandle[KEY_ACTIVE_ID] = null
                 savedStateHandle[KEY_MY_REPORTS_TAB] = false
-                _uiState.update { current ->
-                    current.copy(
-                        selectedRole = action.role,
+                chromeState.update {
+                    it.copy(
                         activeItemType = null,
-                        activeItemId = null,
-                        isMyReportsTab = false,
-                        feedState = computeFeedState(
-                            action.role,
-                            current.searchQuery,
-                            current.selectedCategory,
-                            false,
-                            current.sortOrder
-                        )
+                        activeItemId = null
                     )
                 }
             }
@@ -266,19 +372,17 @@ class MainViewModel(
                 savedStateHandle[KEY_ACTIVE_TYPE] = null
                 savedStateHandle[KEY_ACTIVE_ID] = null
                 savedStateHandle[KEY_MY_REPORTS_TAB] = false
-                _uiState.update {
+                chromeState.update {
                     it.copy(
-                        selectedRole = null,
                         activeItemType = null,
-                        activeItemId = null,
-                        isMyReportsTab = false
+                        activeItemId = null
                     )
                 }
             }
             is MainAction.SetActiveItem -> {
                 savedStateHandle[KEY_ACTIVE_TYPE] = action.typeSegment
                 savedStateHandle[KEY_ACTIVE_ID] = action.itemId
-                _uiState.update {
+                chromeState.update {
                     it.copy(
                         activeItemType = action.typeSegment,
                         activeItemId = action.itemId
@@ -286,11 +390,10 @@ class MainViewModel(
                 }
             }
             MainAction.OpenProfile, MainAction.CloseProfile,
-            MainAction.OpenSettings, MainAction.CloseSettings -> {
-            }
+            MainAction.OpenSettings, MainAction.CloseSettings -> Unit
             MainAction.StartEditProfile -> {
                 savedStateHandle[KEY_PROFILE_EDITING] = true
-                _uiState.update { current ->
+                chromeState.update { current ->
                     val p = current.profile
                     savedStateHandle[KEY_DRAFT_NAME] = p.fullName
                     savedStateHandle[KEY_DRAFT_NICK] = p.nickname
@@ -307,7 +410,7 @@ class MainViewModel(
             }
             MainAction.CancelEditProfile -> {
                 savedStateHandle[KEY_PROFILE_EDITING] = false
-                _uiState.update { current ->
+                chromeState.update { current ->
                     val p = current.profile
                     current.copy(
                         profile = p.copy(
@@ -320,7 +423,7 @@ class MainViewModel(
                 }
             }
             MainAction.SaveProfile -> {
-                val p = _uiState.value.profile
+                val p = chromeState.value.profile
                 val newName = p.draftName.trim().ifEmpty { p.fullName }
                 val newNick = p.draftNickname.trim().removePrefix("@").ifEmpty { p.nickname }
                 val newEmail = p.draftEmail.trim().ifEmpty { p.email }
@@ -328,7 +431,7 @@ class MainViewModel(
                 savedStateHandle[KEY_USER_NICK] = newNick
                 savedStateHandle[KEY_USER_EMAIL] = newEmail
                 savedStateHandle[KEY_PROFILE_EDITING] = false
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(
                         profile = current.profile.copy(
                             fullName = newName,
@@ -345,173 +448,97 @@ class MainViewModel(
             }
             is MainAction.UpdateDraftName -> {
                 savedStateHandle[KEY_DRAFT_NAME] = action.name
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(profile = current.profile.copy(draftName = action.name))
                 }
             }
             is MainAction.UpdateDraftNickname -> {
                 savedStateHandle[KEY_DRAFT_NICK] = action.nickname
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(profile = current.profile.copy(draftNickname = action.nickname))
                 }
             }
             is MainAction.UpdateDraftEmail -> {
                 savedStateHandle[KEY_DRAFT_EMAIL] = action.email
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(profile = current.profile.copy(draftEmail = action.email))
                 }
             }
             is MainAction.ChangeFont -> {
                 savedStateHandle[KEY_FONT] = action.font.name
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(settings = current.settings.copy(appFont = action.font))
                 }
             }
             is MainAction.ChangeTheme -> {
                 savedStateHandle[KEY_THEME] = action.themeMode.name
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(settings = current.settings.copy(themeMode = action.themeMode))
                 }
             }
             is MainAction.ToggleNotifications -> {
                 savedStateHandle[KEY_NOTIF] = action.enabled
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(settings = current.settings.copy(notificationsEnabled = action.enabled))
                 }
             }
             is MainAction.ToggleMessageNotifications -> {
                 savedStateHandle[KEY_MSG_NOTIF] = action.enabled
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(settings = current.settings.copy(messageNotificationsEnabled = action.enabled))
                 }
             }
             is MainAction.ToggleHideLastSeen -> {
                 savedStateHandle[KEY_HIDE_SEEN] = action.hide
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(settings = current.settings.copy(hideLastSeen = action.hide))
                 }
             }
             is MainAction.ToggleAutoDeleteMessages -> {
                 savedStateHandle[KEY_AUTO_DELETE] = action.enabled
-                _uiState.update { current ->
+                chromeState.update { current ->
                     current.copy(settings = current.settings.copy(autoDeleteMessages = action.enabled))
                 }
             }
             MainAction.OpenBlacklistClicked -> {
-                _uiState.update { it.copy(userMessage = UserMessage.BlacklistOpened) }
+                chromeState.update { it.copy(userMessage = UserMessage.BlacklistOpened) }
             }
             is MainAction.SearchQueryChanged -> {
                 savedStateHandle[KEY_QUERY] = action.query
-                _uiState.update { current ->
-                    val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-                    current.copy(
-                        searchQuery = action.query,
-                        feedState = computeFeedState(
-                            role,
-                            action.query,
-                            current.selectedCategory,
-                            current.isMyReportsTab,
-                            current.sortOrder
-                        )
-                    )
-                }
             }
             is MainAction.SelectCategory -> {
                 savedStateHandle[KEY_CATEGORY] = action.category?.name
-                _uiState.update { current ->
-                    val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-                    current.copy(
-                        selectedCategory = action.category,
-                        feedState = computeFeedState(
-                            role,
-                            current.searchQuery,
-                            action.category,
-                            current.isMyReportsTab,
-                            current.sortOrder
-                        )
-                    )
-                }
             }
             is MainAction.SetMyReportsTab -> {
                 savedStateHandle[KEY_MY_REPORTS_TAB] = action.isMyReports
-                _uiState.update { current ->
-                    val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-                    current.copy(
-                        isMyReportsTab = action.isMyReports,
-                        feedState = computeFeedState(
-                            role,
-                            current.searchQuery,
-                            current.selectedCategory,
-                            action.isMyReports,
-                            current.sortOrder
-                        )
-                    )
-                }
             }
             is MainAction.ChangeSortOrder -> {
                 savedStateHandle[KEY_SORT] = action.sortOrder.name
-                _uiState.update { current ->
-                    val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-                    current.copy(
-                        sortOrder = action.sortOrder,
-                        feedState = computeFeedState(
-                            role,
-                            current.searchQuery,
-                            current.selectedCategory,
-                            current.isMyReportsTab,
-                            action.sortOrder
-                        )
-                    )
-                }
             }
             MainAction.ResetFilters -> {
                 savedStateHandle[KEY_QUERY] = ""
                 savedStateHandle[KEY_CATEGORY] = null
-                _uiState.update { current ->
-                    val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-                    current.copy(
-                        searchQuery = "",
-                        selectedCategory = null,
-                        feedState = computeFeedState(role, "", null, current.isMyReportsTab, current.sortOrder)
-                    )
-                }
             }
             MainAction.RetryLoad -> {
-                savedStateHandle[KEY_QUERY] = ""
-                _uiState.update { current ->
-                    val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-                    current.copy(
-                        searchQuery = "",
-                        feedState = computeFeedState(
-                            role,
-                            "",
-                            current.selectedCategory,
-                            current.isMyReportsTab,
-                            current.sortOrder
-                        )
-                    )
+                if (query.value.trim().equals("error", ignoreCase = true) ||
+                    query.value.trim().equals("partial", ignoreCase = true)
+                ) {
+                    savedStateHandle[KEY_QUERY] = ""
                 }
+                retryTrigger.update { it + 1 }
             }
             is MainAction.ContactUserClicked -> {
-                _uiState.update { it.copy(userMessage = UserMessage.OpenChat(action.itemId)) }
+                chromeState.update { it.copy(userMessage = UserMessage.OpenChat(action.itemId)) }
             }
             is MainAction.DeleteItem -> {
                 val deleted = LostItemsRepository.deleteOwnItem(action.itemId)
                 if (deleted) {
                     savedStateHandle[KEY_ACTIVE_TYPE] = null
                     savedStateHandle[KEY_ACTIVE_ID] = null
-                    _uiState.update { current ->
-                        val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-                        current.copy(
+                    chromeState.update {
+                        it.copy(
                             activeItemType = null,
                             activeItemId = null,
-                            feedState = computeFeedState(
-                                role,
-                                current.searchQuery,
-                                current.selectedCategory,
-                                current.isMyReportsTab,
-                                current.sortOrder
-                            ),
                             userMessage = UserMessage.ReportDeleted
                         )
                     }
@@ -519,55 +546,16 @@ class MainViewModel(
             }
             MainAction.NotifyReportSaved -> {
                 savedStateHandle[KEY_MY_REPORTS_TAB] = true
-                _uiState.update { current ->
-                    val role = current.selectedRole ?: AppRole.LOST_SOMETHING
-                    current.copy(
-                        isMyReportsTab = true,
-                        feedState = computeFeedState(
-                            role,
-                            current.searchQuery,
-                            current.selectedCategory,
-                            true,
-                            current.sortOrder
-                        ),
-                        userMessage = UserMessage.ReportSaved
-                    )
+                chromeState.update {
+                    it.copy(userMessage = UserMessage.ReportSaved)
                 }
             }
             MainAction.NotificationsClicked -> {
-                _uiState.update { it.copy(userMessage = UserMessage.Notifications) }
+                chromeState.update { it.copy(userMessage = UserMessage.Notifications) }
             }
             MainAction.UserMessageShown -> {
-                _uiState.update { it.copy(userMessage = null) }
+                chromeState.update { it.copy(userMessage = null) }
             }
-        }
-    }
-
-    private fun computeFeedState(
-        role: AppRole,
-        query: String,
-        category: IconCategory?,
-        onlyMine: Boolean,
-        sortOrder: SortOrder
-    ): FeedState {
-        val trimmed = query.trim()
-        if (trimmed.equals("loading", ignoreCase = true)) {
-            return FeedState.Loading
-        }
-        if (trimmed.equals("error", ignoreCase = true)) {
-            return FeedState.Error
-        }
-        val items = LostItemsRepository.getItemsForRole(
-            role = role,
-            query = trimmed,
-            category = category,
-            onlyMine = onlyMine,
-            sortOrder = sortOrder
-        )
-        return if (items.isEmpty()) {
-            FeedState.Empty
-        } else {
-            FeedState.Content(items)
         }
     }
 }

@@ -37,25 +37,28 @@
     <string name="sort_oldest">Oldest first</string>
     <string name="found_count_label">Matching reports: %1$d</string>
 
-    <string name="empty_title">Nothing found yet</string>
-    <string name="empty_subtitle">No reports match your query or filter. Try resetting filters.</string>
+    <string name="empty_list_title">No reports here yet</string>
+    <string name="empty_list_subtitle">There are no reports in this section yet. Tap + to create the first report.</string>
+    <string name="empty_search_title">No search results</string>
+    <string name="empty_search_subtitle">No reports match your search query or category filter.</string>
     <string name="action_retry">Retry</string>
-    <string name="action_reset_filters">Reset filters</string>
+    <string name="action_reset_filters">Reset search &amp; filters</string>
     <string name="error_network">Failed to load feed. Check your connection.</string>
+    <string name="warning_metadata_partial">Campus verification metadata is temporarily unavailable (showing partial data).</string>
+    <string name="badge_verified">Verified</string>
 
     <string name="action_contact_finder">Contact finder</string>
     <string name="action_contact_owner">Contact owner</string>
     <string name="share_message_found">Look, an item was found: %1$s</string>
     <string name="share_message_lost">Help find this lost item: %1$s</string>
 
-    <string name="toast_chat">Opening secure chat for report #%1$s...</string>
+    <string name="toast_chat">Opening secure chat for report...</string>
     <string name="toast_create">Report saved successfully</string>
     <string name="toast_deleted">Report deleted</string>
     <string name="toast_notifications">No new notifications</string>
     <string name="toast_blacklist">Blacklist is empty</string>
     <string name="toast_profile_saved">Profile updated</string>
 
-    <string name="detail_id_format">Report ID: #%1$s</string>
     <string name="detail_select_placeholder">Select a report from the list to view details</string>
     <string name="detail_created_at">Created: %1$s</string>
     <string name="detail_updated_at">Last edited: %1$s</string>
@@ -84,9 +87,6 @@
     <string name="dialog_exit_message">You have unsaved changes in this form. Exit without saving?</string>
     <string name="action_discard">Exit</string>
     <string name="action_stay">Stay</string>
-
-    <string name="fold_book_mode">Foldable Book mode: panes split around hinge</string>
-    <string name="fold_tabletop_mode">Foldable Tabletop mode: content on top, controls below hinge</string>
 
     <string name="error_item_not_found">Report not found or link is corrupted</string>
     <string name="action_back_to_list">Back to list</string>

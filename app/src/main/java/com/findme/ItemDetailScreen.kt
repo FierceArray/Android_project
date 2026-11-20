@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -85,6 +86,7 @@ fun ItemDetailScreen(
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
+
             IconButton(onClick = onShareClick) {
                 Icon(
                     imageVector = Icons.Default.Share,
@@ -110,24 +112,27 @@ fun ItemDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(AppDimens.paddingLarge)
             ) {
-                Text(
-                    text = stringResource(R.string.detail_id_format, item.id),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = item.category,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    if (item.isVerified) {
+                        Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
+
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = stringResource(R.string.badge_verified),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
-                Text(
-                    text = item.deepLink,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
-                Text(
-                    text = item.category,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
+
                 Text(
                     text = item.location,
                     style = MaterialTheme.typography.titleSmall,
@@ -135,18 +140,21 @@ fun ItemDetailScreen(
                 )
 
                 Spacer(modifier = Modifier.height(AppDimens.paddingSmall))
+
                 Text(
                     text = stringResource(R.string.detail_created_at, item.formattedCreatedTime),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
                 item.formattedUpdatedTime?.let { updatedTime ->
                     Text(
                         text = stringResource(R.string.detail_updated_at, updatedTime),
-                        style = MaterialTheme.colorScheme.primary.let { MaterialTheme.typography.bodySmall },
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+
                 item.changeNote?.let { note ->
                     Text(
                         text = stringResource(R.string.detail_change_note, note),
@@ -161,6 +169,7 @@ fun ItemDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(AppDimens.paddingMedium))
+
                 Text(
                     text = item.description,
                     style = MaterialTheme.typography.bodyLarge,
@@ -189,9 +198,12 @@ fun ItemDetailScreen(
                         contentDescription = null,
                         modifier = Modifier.size(AppDimens.iconSmall)
                     )
+
                     Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
+
                     Text(stringResource(R.string.action_edit_item))
                 }
+
                 OutlinedButton(
                     onClick = { showDeleteConfirm = true },
                     modifier = Modifier.weight(1f),
@@ -204,7 +216,9 @@ fun ItemDetailScreen(
                         contentDescription = null,
                         modifier = Modifier.size(AppDimens.iconSmall)
                     )
+
                     Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
+
                     Text(stringResource(R.string.action_delete_item))
                 }
             }
@@ -232,6 +246,7 @@ private fun PhotoAttachmentBanner(photoAttachment: PhotoAttachment) {
         PhotoAttachment.KEYS_PHOTO -> Icons.Default.Key to R.string.photo_keys
         PhotoAttachment.NONE -> return
     }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -246,7 +261,9 @@ private fun PhotoAttachmentBanner(photoAttachment: PhotoAttachment) {
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(AppDimens.iconTouchTarget)
         )
+
         Spacer(modifier = Modifier.width(AppDimens.paddingMedium))
+
         Text(
             text = stringResource(R.string.detail_photo_attached, stringResource(labelRes)),
             style = MaterialTheme.typography.bodyMedium,

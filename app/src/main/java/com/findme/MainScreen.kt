@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -97,10 +99,6 @@ fun MainScreenContainer(
     var isSearchFocused by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
-
-    LaunchedEffect(allRepoItems) {
-        viewModel.refreshFeed()
-    }
 
     val initialRoutes = remember {
         if (!deepLinkItemId.isNullOrBlank()) {
@@ -194,7 +192,7 @@ fun MainScreenContainer(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            contentWindowInsets = WindowInsets.systemBars
+            contentWindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
         ) { innerPadding ->
             val bottomInset = innerPadding.calculateBottomPadding()
             val layoutDirection = LocalLayoutDirection.current
@@ -645,14 +643,34 @@ fun FeedListPane(
         else -> stringResource(R.string.banner_found_desc)
     }
 
+    val listState = rememberLazyListState()
+    var isSearchFocusedLocal by remember { mutableStateOf(false) }
+
+    val isScrolledPastSearchBar by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > 2 }
+    }
+
+    LaunchedEffect(isSearchFocusedLocal) {
+        if (isSearchFocusedLocal && !isScrolledPastSearchBar) {
+            listState.animateScrollToItem(index = 2)
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding(),
             contentPadding = PaddingValues(
                 start = AppDimens.paddingMedium,
                 end = AppDimens.paddingMedium,
                 top = AppDimens.paddingSmall,
-                bottom = bottomInset + AppDimens.fabBottomSpace + AppDimens.iconEmptyState
+                bottom = if (showBottomBar) {
+                    bottomInset + AppDimens.fabBottomSpace + AppDimens.iconEmptyState
+                } else {
+                    AppDimens.paddingLarge
+                }
             ),
             verticalArrangement = Arrangement.spacedBy(AppDimens.paddingBannerIcon)
         ) {
@@ -724,7 +742,10 @@ fun FeedListPane(
                     onQueryChange = { onAction(MainAction.SearchQueryChanged(it)) },
                     onCategorySelect = { onAction(MainAction.SelectCategory(it)) },
                     onSortOrderChange = { onAction(MainAction.ChangeSortOrder(it)) },
-                    onSearchFocusChanged = onSearchFocusChanged
+                    onSearchFocusChanged = { focused ->
+                        isSearchFocusedLocal = focused
+                        onSearchFocusChanged(focused)
+                    }
                 )
             }
 
@@ -736,7 +757,18 @@ fun FeedListPane(
                 is FeedState.Empty -> {
                     item {
                         EmptyStateView(
+                            isSearchResultEmpty = false,
                             hasActiveFilters = state.hasActiveFilters,
+                            onResetFilters = { onAction(MainAction.ResetFilters) }
+                        )
+                    }
+                }
+
+                is FeedState.EmptySearch -> {
+                    item {
+                        EmptyStateView(
+                            isSearchResultEmpty = true,
+                            hasActiveFilters = true,
                             onResetFilters = { onAction(MainAction.ResetFilters) }
                         )
                     }
@@ -752,6 +784,36 @@ fun FeedListPane(
                 }
 
                 is FeedState.Content -> {
+                    if (!feed.isMetadataAvailable) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                                ),
+                                shape = RoundedCornerShape(AppDimens.radiusMedium)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(AppDimens.paddingBannerIcon),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+
+                                    Spacer(modifier = Modifier.width(AppDimens.paddingSmall))
+
+                                    Text(
+                                        text = stringResource(R.string.warning_metadata_partial),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     item {
                         Text(
                             text = stringResource(R.string.found_count_label, state.itemCount),
@@ -775,6 +837,36 @@ fun FeedListPane(
                         )
                     }
                 }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = isScrolledPastSearchBar,
+            enter = fadeIn(tween(180)),
+            exit = fadeOut(tween(180)),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .padding(
+                    start = AppDimens.paddingMedium,
+                    end = AppDimens.paddingMedium,
+                    top = AppDimens.paddingSmall
+                )
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = AppDimens.paddingSmall,
+                shadowElevation = AppDimens.paddingSmall
+            ) {
+                SearchInputCapsule(
+                    query = state.searchQuery,
+                    onQueryChange = { onAction(MainAction.SearchQueryChanged(it)) },
+                    onSearchFocusChanged = { focused ->
+                        isSearchFocusedLocal = focused
+                        onSearchFocusChanged(focused)
+                    }
+                )
             }
         }
 
@@ -826,6 +918,85 @@ fun FeedListPane(
 }
 
 @Composable
+fun SearchInputCapsule(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onSearchFocusChanged: (Boolean) -> Unit = {}
+) {
+    var allowSearchFocus by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(allowSearchFocus) {
+        if (allowSearchFocus) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .focusProperties { canFocus = allowSearchFocus }
+                .onFocusChanged { focusState ->
+                    onSearchFocusChanged(focusState.isFocused)
+                    if (!focusState.isFocused) {
+                        allowSearchFocus = false
+                    }
+                },
+            singleLine = true,
+            shape = CircleShape,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(
+                onSearch = {
+                    allowSearchFocus = false
+                    focusManager.clearFocus()
+                }
+            ),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.search_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            leadingIcon = {
+                Icon(imageVector = Icons.Default.Search, contentDescription = null)
+            },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = stringResource(R.string.search_clear)
+                        )
+                    }
+                }
+            }
+        )
+
+        if (!allowSearchFocus) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                allowSearchFocus = true
+                            }
+                        )
+                    }
+            )
+        }
+    }
+}
+
+@Composable
 fun SearchAndFilterBar(
     query: String,
     selectedCategory: IconCategory?,
@@ -840,81 +1011,17 @@ fun SearchAndFilterBar(
     var sortMenuExpanded by remember { mutableStateOf(false) }
     val hasFilter = selectedCategory != null
 
-    var allowSearchFocus by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
-
-    LaunchedEffect(allowSearchFocus) {
-        if (allowSearchFocus) {
-            focusRequester.requestFocus()
-        }
-    }
-
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AppDimens.paddingSmall)
     ) {
-        Box(modifier = Modifier.weight(1f)) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester)
-                    .focusProperties { canFocus = allowSearchFocus }
-                    .onFocusChanged { focusState ->
-                        onSearchFocusChanged(focusState.isFocused)
-                        if (!focusState.isFocused) {
-                            allowSearchFocus = false
-                        }
-                    },
-                singleLine = true,
-                shape = CircleShape,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        allowSearchFocus = false
-                        focusManager.clearFocus()
-                    }
-                ),
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.search_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.search_clear)
-                            )
-                        }
-                    }
-                }
-            )
-
-            if (!allowSearchFocus) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = {
-                                    allowSearchFocus = true
-                                }
-                            )
-                        }
-                )
-            }
-        }
+        SearchInputCapsule(
+            query = query,
+            onQueryChange = onQueryChange,
+            onSearchFocusChanged = onSearchFocusChanged,
+            modifier = Modifier.weight(1f)
+        )
 
         Box {
             FilledTonalIconButton(
@@ -1061,6 +1168,7 @@ private val previewFoundItems = listOf(
         location = "Район ст. м. Бауманская",
         createdAtMillis = 1762516800000L,
         isMine = false,
+        isVerified = true,
         photoAttachment = PhotoAttachment.PHONE_PHOTO,
         iconType = IconCategory.ELECTRONICS
     )
@@ -1110,7 +1218,6 @@ private fun MainScreenEmptyPreview() {
             FeedListPane(
                 state = MainUiState(
                     selectedRole = AppRole.LOST_SOMETHING,
-                    searchQuery = "Ключи",
                     feedState = FeedState.Empty
                 ),
                 onAction = {},
@@ -1121,7 +1228,26 @@ private fun MainScreenEmptyPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "4. FeedListPane - Error")
+@Preview(showBackground = true, name = "4. FeedListPane - EmptySearch")
+@Composable
+private fun MainScreenEmptySearchPreview() {
+    FindMeTheme(dynamicColor = false) {
+        Surface {
+            FeedListPane(
+                state = MainUiState(
+                    selectedRole = AppRole.LOST_SOMETHING,
+                    searchQuery = "Ключи",
+                    feedState = FeedState.EmptySearch
+                ),
+                onAction = {},
+                onItemClick = {},
+                onShareItem = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "5. FeedListPane - Error")
 @Composable
 private fun MainScreenErrorPreview() {
     FindMeTheme(dynamicColor = false) {

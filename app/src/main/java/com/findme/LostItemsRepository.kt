@@ -1,12 +1,44 @@
 package com.findme
 
+import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+
+data class SearchRequest(
+    val role: AppRole,
+    val query: String,
+    val category: IconCategory?,
+    val onlyMine: Boolean,
+    val sortOrder: SortOrder
+)
+
+data class SearchResultData(
+    val items: List<LostItem>,
+    val totalInSectionCount: Int,
+    val isMetadataAvailable: Boolean
+)
 
 object LostItemsRepository {
     private val baseTimeMillis = System.currentTimeMillis()
+    private val mutex = Mutex()
+
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val cpuDispatcher: CoroutineDispatcher = Dispatchers.Default
+
+    private val verifiedReportIds = setOf("found_1", "found_3", "found_5", "lost_1", "lost_2")
 
     private val initialItems = listOf(
         LostItem(
@@ -114,49 +146,99 @@ object LostItemsRepository {
     private val _allItems = MutableStateFlow(initialItems)
     val allItems: StateFlow<List<LostItem>> = _allItems.asStateFlow()
 
-    fun getItemsForRole(
-        role: AppRole,
-        query: String,
-        category: IconCategory?,
-        onlyMine: Boolean,
-        sortOrder: SortOrder
-    ): List<LostItem> {
-        val targetType = if (role == AppRole.LOST_SOMETHING) ItemType.FOUND else ItemType.LOST
-        val sourceList = _allItems.value.filter { item ->
-            if (onlyMine) {
+    suspend fun searchItemsAsync(request: SearchRequest): SearchResultData = supervisorScope {
+        val rawItemsDeferred = async(ioDispatcher) {
+            loadSectionItemsFromSource(request)
+        }
+        val verifiedIdsDeferred = async(ioDispatcher) {
+            loadVerifiedIdsFromSource(request.query)
+        }
+
+        val sectionItems = rawItemsDeferred.await()
+
+        val verifiedIds: Set<String>? = try {
+            verifiedIdsDeferred.await()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: IOException) {
+            null
+        }
+
+        withContext(cpuDispatcher) {
+            val trimmedQuery = request.query.trim()
+            val queryForFilter = if (trimmedQuery.equals("partial", ignoreCase = true)) "" else trimmedQuery
+            val filtered = mutableListOf<LostItem>()
+
+            for (item in sectionItems) {
+                ensureActive()
+                val matchesCategory = request.category == null || item.iconType == request.category
+                val matchesQuery = queryForFilter.isEmpty() ||
+                        item.category.contains(queryForFilter, ignoreCase = true) ||
+                        item.description.contains(queryForFilter, ignoreCase = true) ||
+                        item.location.contains(queryForFilter, ignoreCase = true)
+
+                if (matchesCategory && matchesQuery) {
+                    val isItemVerified = verifiedIds?.contains(item.id) == true || item.isMine
+                    filtered.add(item.copy(isVerified = isItemVerified))
+                }
+            }
+
+            val sorted = when (request.sortOrder) {
+                SortOrder.NEWEST_FIRST -> filtered.sortedByDescending { it.createdAtMillis }
+                SortOrder.OLDEST_FIRST -> filtered.sortedBy { it.createdAtMillis }
+            }
+
+            SearchResultData(
+                items = sorted,
+                totalInSectionCount = sectionItems.size,
+                isMetadataAvailable = verifiedIds != null
+            )
+        }
+    }
+
+    private suspend fun loadSectionItemsFromSource(request: SearchRequest): List<LostItem> {
+        delay(300.milliseconds)
+        val trimmed = request.query.trim()
+        if (trimmed.equals("error", ignoreCase = true)) {
+            throw IOException("Simulated primary data source network error")
+        }
+        if (trimmed.equals("loading", ignoreCase = true)) {
+            delay(60_000.milliseconds)
+        }
+        val snapshot = mutex.withLock { _allItems.value }
+        val targetType = if (request.role == AppRole.LOST_SOMETHING) ItemType.FOUND else ItemType.LOST
+        return snapshot.filter { item ->
+            if (request.onlyMine) {
                 item.isMine
             } else {
                 !item.isMine && item.type == targetType
             }
         }
-        val trimmedQuery = query.trim()
-        val filtered = sourceList.filter { item ->
-            val matchesCategory = category == null || item.iconType == category
-            val matchesQuery = trimmedQuery.isEmpty() ||
-                    item.category.contains(trimmedQuery, ignoreCase = true) ||
-                    item.description.contains(trimmedQuery, ignoreCase = true) ||
-                    item.location.contains(trimmedQuery, ignoreCase = true)
-            matchesCategory && matchesQuery
+    }
+
+    private suspend fun loadVerifiedIdsFromSource(query: String): Set<String> {
+        delay(200.milliseconds)
+        if (query.trim().equals("partial", ignoreCase = true)) {
+            throw IOException("Simulated verification metadata service error")
         }
-        return when (sortOrder) {
-            SortOrder.NEWEST_FIRST -> filtered.sortedByDescending { it.createdAtMillis }
-            SortOrder.OLDEST_FIRST -> filtered.sortedBy { it.createdAtMillis }
-        }
+        return mutex.withLock { verifiedReportIds.toSet() }
     }
 
     fun getItemByLink(typeSegment: String?, itemId: String?): LostItem? {
         if (itemId.isNullOrBlank()) return null
         val list = _allItems.value
-        return when (typeSegment) {
+        val found = when (typeSegment) {
             ItemType.FOUND.pathSegment -> list.find { it.type == ItemType.FOUND && it.id == itemId }
             ItemType.LOST.pathSegment -> list.find { it.type == ItemType.LOST && it.id == itemId }
             else -> list.find { it.id == itemId }
         }
+        return found?.copy(isVerified = verifiedReportIds.contains(found.id) || found.isMine)
     }
 
     fun getItemById(itemId: String?): LostItem? {
         if (itemId.isNullOrBlank()) return null
-        return _allItems.value.find { it.id == itemId }
+        val found = _allItems.value.find { it.id == itemId }
+        return found?.copy(isVerified = verifiedReportIds.contains(found.id) || found.isMine)
     }
 
     fun saveItem(
@@ -181,7 +263,8 @@ object LostItemsRepository {
                 iconType = iconType,
                 photoAttachment = photoAttachment,
                 updatedAtMillis = nowMillis,
-                changeNote = changeNote.trim().ifEmpty { null }
+                changeNote = changeNote.trim().ifEmpty { null },
+                isVerified = true
             )
         } else {
             val newId = "${type.pathSegment}_${nowMillis % 100000}"
@@ -195,6 +278,7 @@ object LostItemsRepository {
                 updatedAtMillis = null,
                 changeNote = null,
                 isMine = true,
+                isVerified = true,
                 photoAttachment = photoAttachment,
                 iconType = iconType
             )
